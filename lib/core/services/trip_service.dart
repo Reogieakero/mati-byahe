@@ -1,22 +1,20 @@
-import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../database/local_database.dart';
 
-class SyncService {
+class TripService {
   final LocalDatabase _localDb = LocalDatabase();
   final _supabase = Supabase.instance.client;
 
-  Future<void> syncOnStart() async {
+  Future<void> syncTrips() async {
     try {
-      final result = await InternetAddress.lookup('google.com');
-      if (result.isEmpty || result[0].rawAddress.isEmpty) return;
-
       final db = await _localDb.database;
       final List<Map<String, dynamic>> unsynced = await db.query(
         'trips',
         where: 'is_synced = ?',
         whereArgs: [0],
       );
+
+      if (unsynced.isEmpty) return;
 
       for (var data in unsynced) {
         try {
@@ -42,6 +40,8 @@ class SyncService {
           continue;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      print("Sync Service Error: $e");
+    }
   }
 }

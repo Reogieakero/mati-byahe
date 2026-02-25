@@ -27,6 +27,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                if (snapshot.hasError) {
+                  return Center(child: Text("Error: ${snapshot.error}"));
+                }
+
                 final trips = snapshot.data ?? [];
 
                 if (trips.isEmpty) {
@@ -53,7 +57,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildTripCard(Map<String, dynamic> trip) {
-    DateTime date = DateTime.parse(trip['date']);
+    DateTime date = DateTime.tryParse(trip['date'] ?? '') ?? DateTime.now();
+    double fare = (trip['fare'] as num?)?.toDouble() ?? 0.0;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(15),
@@ -82,7 +88,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               ),
               Text(
-                "₱${(trip['fare'] as double).toStringAsFixed(2)}",
+                "₱${fare.toStringAsFixed(2)}",
                 style: const TextStyle(
                   color: AppColors.primaryBlue,
                   fontWeight: FontWeight.bold,
@@ -92,12 +98,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ],
           ),
           const Divider(height: 20),
-          _buildRouteItem(Icons.circle, AppColors.primaryBlue, trip['pickup']),
+          _buildRouteItem(
+            Icons.circle,
+            AppColors.primaryBlue,
+            trip['pickup'] ?? "Unknown",
+          ),
           const SizedBox(height: 8),
           _buildRouteItem(
             Icons.location_on,
             Colors.redAccent,
-            trip['drop_off'],
+            trip['drop_off'] ?? "Unknown",
           ),
         ],
       ),

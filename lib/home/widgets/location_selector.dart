@@ -7,6 +7,7 @@ import '../../core/services/fare_service.dart';
 import '../../core/services/location_data_service.dart';
 import '../../core/database/local_database.dart';
 import '../../core/constant/app_colors.dart';
+import '../home_controller.dart';
 
 class LocationSelector extends StatefulWidget {
   final String email;
@@ -23,6 +24,7 @@ class LocationSelector extends StatefulWidget {
 }
 
 class _LocationSelectorState extends State<LocationSelector> {
+  final HomeController _controller = HomeController();
   String? _pickup;
   String? _drop;
   List<String> _allLocations = [];
@@ -184,16 +186,18 @@ class _LocationSelectorState extends State<LocationSelector> {
         fare: fare,
         buttonLabel: 'Ride',
         onArrived: () async {
-          await LocalDatabase().saveTrip(
+          await _controller.startTrip(
+            context: context,
             email: widget.email,
-            pickup: _pickup ?? "Unknown",
-            dropOff: _drop ?? "Unknown",
             fare: fare,
+            pickup: _pickup!,
+            dropOff: _drop!,
             gasTier: _selectedGasTier,
+            onSuccess: (val) {
+              widget.onFareCalculated(val);
+              _resetTrip();
+            },
           );
-
-          widget.onFareCalculated(fare);
-          _resetTrip();
         },
       );
     }

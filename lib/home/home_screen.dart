@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import '../core/constant/app_colors.dart';
-import '../core/database/local_database.dart';
-import '../core/database/sync_service.dart';
-import '../signup/verification_screen.dart';
 import 'widgets/home_header.dart';
 import 'widgets/dashboard_cards.dart';
 import 'widgets/verification_overlay.dart';
 import 'widgets/location_selector.dart';
 import 'widgets/action_grid_widget.dart';
-import 'widgets/fare_display.dart';
-import 'widgets/confirmation_dialog.dart';
 import 'widgets/active_trip_widget.dart';
 import 'home_controller.dart';
 
@@ -25,11 +20,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin {
   final HomeController _controller = HomeController();
-  final LocalDatabase _localDb = LocalDatabase();
   bool _isVerified = false;
   bool _isLoading = true;
   bool _isSendingCode = false;
-  double? _persistedFare;
+
+  Map<String, dynamic>? _activeTripData;
 
   @override
   bool get wantKeepAlive => true;
@@ -37,178 +32,29 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _initializeData();
+    _initialize();
   }
 
-  Future<void> _initializeData() async {
-    await _loadStatus();
-    await _loadSavedFare();
-  }
-
-  Future<void> _loadStatus() async {
+  Future<void> _initialize() async {
     final verified = await _controller.checkVerification(widget.email);
+    final activeData = await _controller.loadSavedFare(widget.email);
+
     if (mounted) {
       setState(() {
         _isVerified = verified;
+        if (activeData != null) {
+          _activeTripData = activeData;
+        }
         _isLoading = false;
       });
     }
-    SyncService().syncOnStart();
-  }
-
-  Future<void> _loadSavedFare() async {
-    final fare = await _localDb.getActiveFare(widget.email);
-    if (mounted && fare != null) {
-      setState(() {
-        _persistedFare = fare;
-      });
-    }
-  }
-
-  Future<void> _handleFareUpdate(double fare) async {
-    setState(() => _persistedFare = fare);
-    await _localDb.saveActiveFare(widget.email, fare);
-    _showTripStartNotification();
-  }
-
-  void _showTripStartNotification() {
-    final overlay = Overlay.of(context);
-    final overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        top: MediaQuery.of(context).padding.top + 10,
-        left: 20,
-        right: 20,
-        child: Material(
-          color: Colors.transparent,
-          child: TweenAnimationBuilder(
-            duration: const Duration(milliseconds: 500),
-            tween: Tween<double>(begin: -100, end: 0),
-            curve: Curves.easeOutBack,
-            builder: (context, double value, child) {
-              return Transform.translate(
-                offset: Offset(0, value),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.darkNavy,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primaryYellow,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.bolt,
-                          color: AppColors.darkNavy,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Trip Started",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            Text(
-                              "Safe travels! Track your fare below.",
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-
-    overlay.insert(overlayEntry);
-    Future.delayed(const Duration(seconds: 3), () => overlayEntry.remove());
-  }
-
-  Future<void> _clearFare() async {
-    setState(() => _persistedFare = null);
-    await _localDb.clearActiveFare(widget.email);
-  }
-
-  Future<void> _handleVerification() async {
-    setState(() => _isSendingCode = true);
-    try {
-      await _controller.resendVerificationCode(widget.email);
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => VerificationScreen(email: widget.email),
-        ),
-      ).then((_) => _loadStatus());
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Error")));
-    } finally {
-      if (mounted) setState(() => _isSendingCode = false);
-    }
-  }
-
-  void _confirmArrival() {
-    showDialog(
-      context: context,
-      builder: (context) => ConfirmationDialog(
-        title: "End Trip?",
-        content: "Are you sure you have reached your destination?",
-        confirmText: "Yes, Arrived",
-        onConfirm: _clearFare,
-      ),
-    );
-  }
-
-  void _confirmChangeRoute() {
-    showDialog(
-      context: context,
-      builder: (context) => ConfirmationDialog(
-        title: "Change Route?",
-        content: "This will cancel your current fare calculation. Continue?",
-        confirmText: "Change",
-        onConfirm: _clearFare,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-
     if (_isLoading) {
-      return Container(
-        color: Colors.white,
-        child: const Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -256,7 +102,12 @@ class _HomeScreenState extends State<HomeScreen>
             const SizedBox(height: 32),
             VerificationOverlay(
               isSendingCode: _isSendingCode,
-              onVerify: _handleVerification,
+              onVerify: () => _controller.handleVerification(
+                context: context,
+                email: widget.email,
+                setSendingState: (s) => setState(() => _isSendingCode = s),
+                onReturn: _initialize,
+              ),
             ),
           ],
         ),
@@ -287,16 +138,9 @@ class _HomeScreenState extends State<HomeScreen>
                 const SizedBox(height: 10),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 15),
-                  child: _persistedFare != null
-                      ? ActiveTripWidget(
-                          fare: _persistedFare!,
-                          onArrived: _confirmArrival,
-                          onCancel: _confirmChangeRoute,
-                        )
-                      : LocationSelector(
-                          email: widget.email,
-                          onFareCalculated: _handleFareUpdate,
-                        ),
+                  child: _activeTripData != null
+                      ? _buildActiveTrip()
+                      : _buildLocationSelector(),
                 ),
                 const SizedBox(height: 30),
               ],
@@ -304,6 +148,46 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildActiveTrip() {
+    final fareValue = (_activeTripData?['fare'] as num?)?.toDouble() ?? 0.0;
+
+    return ActiveTripWidget(
+      fare: fareValue,
+      onArrived: () => _controller.confirmArrival(context, () {
+        _controller.clearFare(
+          email: widget.email,
+          pickup: _activeTripData?['pickup'] ?? "Unknown",
+          dropOff: _activeTripData?['drop_off'] ?? "Unknown",
+          gasTier: _activeTripData?['gas_tier'] ?? "N/A",
+          fare: fareValue,
+          onCleared: () => setState(() => _activeTripData = null),
+        );
+      }),
+      onCancel: () => _controller.confirmChangeRoute(context, () {
+        _controller.clearFare(
+          email: widget.email,
+          pickup: "Cancelled",
+          dropOff: "Cancelled",
+          gasTier: "N/A",
+          fare: 0.0,
+          onCleared: () => setState(() => _activeTripData = null),
+        );
+      }),
+    );
+  }
+
+  Widget _buildLocationSelector() {
+    return LocationSelector(
+      email: widget.email,
+      onFareCalculated: (fare) async {
+        final updatedData = await _controller.loadSavedFare(widget.email);
+        setState(() {
+          _activeTripData = updatedData;
+        });
+      },
     );
   }
 }

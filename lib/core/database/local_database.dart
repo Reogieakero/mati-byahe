@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:uuid/uuid.dart';
 
 class LocalDatabase {
   static Database? _database;
@@ -13,37 +14,15 @@ class LocalDatabase {
   Future<Database> _initDB() async {
     String dbPath = await getDatabasesPath();
     String pathName = join(dbPath, 'byahe.db');
-
     return await openDatabase(
       pathName,
-      version: 9, // Incremented to 9 to force the update
-      onCreate: (db, version) async {
-        await _createTables(db);
-      },
+      version: 12,
+      onCreate: (db, version) async => await _createTables(db),
       onUpgrade: (db, oldVersion, newVersion) async {
-        // Upgrade to version 7 logic (Active Fare)
-        if (oldVersion < 7) {
+        if (oldVersion < 12) {
           await db.execute('DROP TABLE IF EXISTS active_fare');
-          await db.execute(
-            'CREATE TABLE active_fare(email TEXT PRIMARY KEY, fare REAL)',
-          );
-        }
-
-        // Upgrade to version 9 logic (Trips History)
-        // This covers any version prior to 9, ensuring the table is created
-        if (oldVersion < 9) {
-          await db.execute('''
-            CREATE TABLE IF NOT EXISTS trips(
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              email TEXT,
-              pickup TEXT,
-              drop_off TEXT,
-              fare REAL,
-              gas_tier TEXT,
-              date TEXT,
-              is_synced INTEGER DEFAULT 0
-            )
-          ''');
+          await db.execute('DROP TABLE IF EXISTS trips');
+          await _createTables(db);
         }
       },
     );
@@ -63,12 +42,18 @@ class LocalDatabase {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS active_fare(
         email TEXT PRIMARY KEY,
-        fare REAL
+        fare REAL,
+        pickup TEXT,
+        drop_off TEXT,
+        gas_tier TEXT
       )
     ''');
     await db.execute('''
       CREATE TABLE IF NOT EXISTS trips(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE,
+        passenger_id TEXT,
+        driver_id TEXT,
         email TEXT,
         pickup TEXT,
         drop_off TEXT,
@@ -86,9 +71,14 @@ class LocalDatabase {
     required String dropOff,
     required double fare,
     required String gasTier,
+    String? passengerId,
+    String? driverId,
   }) async {
     final db = await database;
     await db.insert('trips', {
+      'uuid': const Uuid().v4(),
+      'passenger_id': passengerId,
+      'driver_id': driverId,
       'email': email,
       'pickup': pickup,
       'drop_off': dropOff,
@@ -109,25 +99,31 @@ class LocalDatabase {
     );
   }
 
-  Future<void> saveActiveFare(String email, double fare) async {
+  Future<void> saveActiveFare({
+    required String email,
+    required double fare,
+    required String pickup,
+    required String dropOff,
+    required String gasTier,
+  }) async {
     final db = await database;
     await db.insert('active_fare', {
       'email': email,
       'fare': fare,
+      'pickup': pickup,
+      'drop_off': dropOff,
+      'gas_tier': gasTier,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<double?> getActiveFare(String email) async {
+  Future<Map<String, dynamic>?> getActiveFare(String email) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'active_fare',
       where: 'email = ?',
       whereArgs: [email],
     );
-    if (maps.isNotEmpty) {
-      return maps.first['fare'] as double;
-    }
-    return null;
+    return maps.isNotEmpty ? maps.first : null;
   }
 
   Future<void> clearActiveFare(String email) async {
