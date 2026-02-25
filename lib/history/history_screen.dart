@@ -24,7 +24,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.primaryYellow.withOpacity(0.2), // From Home Screen
+              AppColors.primaryYellow.withOpacity(0.2),
               Colors.white,
               AppColors.primaryYellow.withOpacity(0.1),
             ],
@@ -52,11 +52,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     return _buildEmptyState();
                   }
 
-                  // ListView.builder makes the tiles scrollable
                   return ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 70),
-                    physics:
-                        const BouncingScrollPhysics(), // Added for better feel
+                    padding: const EdgeInsets.only(bottom: 100),
+                    physics: const BouncingScrollPhysics(),
                     itemCount: trips.length,
                     itemBuilder: (context, index) {
                       return HistoryTile(trip: trips[index]);
@@ -72,10 +70,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildEmptyState() {
-    return const Center(
-      child: Text(
-        "No past trips found",
-        style: TextStyle(color: AppColors.textGrey),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.history_rounded,
+            size: 60,
+            color: AppColors.darkNavy.withOpacity(0.2),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            "No past trips found",
+            style: TextStyle(
+              color: AppColors.textGrey,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

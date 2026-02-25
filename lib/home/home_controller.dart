@@ -37,13 +37,17 @@ class HomeController {
     required String gasTier,
     required Function(double) onSuccess,
   }) async {
+    final String startTime = DateTime.now().toIso8601String();
+
     await _localDb.saveActiveFare(
       email: email,
       fare: fare,
       pickup: pickup,
       dropOff: dropOff,
       gasTier: gasTier,
+      startTime: startTime,
     );
+
     onSuccess(fare);
     showTripStartNotification(context);
   }
@@ -54,9 +58,12 @@ class HomeController {
     required String dropOff,
     required String gasTier,
     required double fare,
+    required String? startTime,
     required Function() onCleared,
   }) async {
     final currentUser = _supabase.auth.currentUser;
+    const String mockDriver = "Lito Lapid";
+    final String endTime = DateTime.now().toIso8601String();
 
     await _localDb.saveTrip(
       email: email,
@@ -65,6 +72,9 @@ class HomeController {
       fare: fare,
       gasTier: gasTier,
       passengerId: currentUser?.id,
+      driverName: mockDriver,
+      startTime: startTime,
+      endTime: endTime,
     );
 
     await _localDb.clearActiveFare(email);

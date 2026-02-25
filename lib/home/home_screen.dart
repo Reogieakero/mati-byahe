@@ -163,6 +163,7 @@ class _HomeScreenState extends State<HomeScreen>
           dropOff: _activeTripData?['drop_off'] ?? "Unknown",
           gasTier: _activeTripData?['gas_tier'] ?? "N/A",
           fare: fareValue,
+          startTime: _activeTripData?['start_time'],
           onCleared: () => setState(() => _activeTripData = null),
         );
       }),
@@ -173,6 +174,7 @@ class _HomeScreenState extends State<HomeScreen>
           dropOff: "Cancelled",
           gasTier: "N/A",
           fare: 0.0,
+          startTime: _activeTripData?['start_time'],
           onCleared: () => setState(() => _activeTripData = null),
         );
       }),

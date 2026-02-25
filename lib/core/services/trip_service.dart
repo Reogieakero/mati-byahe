@@ -26,6 +26,8 @@ class TripService {
             'drop_off': data['drop_off'],
             'calculated_fare': data['fare'],
             'gas_tier': data['gas_tier'],
+            'start_datetime': data['start_time'],
+            'end_datetime': data['end_time'],
             'created_at': data['date'],
             'status': 'completed',
           });
