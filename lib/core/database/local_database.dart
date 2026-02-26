@@ -16,13 +16,12 @@ class LocalDatabase {
     String pathName = join(dbPath, 'byahe.db');
     return await openDatabase(
       pathName,
-      version: 14,
+      version: 17,
       onCreate: (db, version) async => await _createTables(db),
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 14) {
-          await db.execute('DROP TABLE IF EXISTS active_fare');
-          await db.execute('DROP TABLE IF EXISTS trips');
-          await _createTables(db);
+        if (oldVersion < 17) {
+          await db.execute('DROP TABLE IF EXISTS reports');
+          await _createReportsTable(db);
         }
       },
     );
@@ -67,6 +66,43 @@ class LocalDatabase {
         is_synced INTEGER DEFAULT 0
       )
     ''');
+    await _createReportsTable(db);
+  }
+
+  Future<void> _createReportsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS reports(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_uuid TEXT,
+        passenger_id TEXT,
+        issue_type TEXT NOT NULL,
+        description TEXT NOT NULL,
+        evidence_url TEXT,
+        status TEXT DEFAULT 'pending',
+        reported_at TEXT NOT NULL,
+        is_synced INTEGER DEFAULT 0
+      )
+    ''');
+  }
+
+  Future<void> saveReport({
+    required String tripUuid,
+    required String passengerId,
+    required String issueType,
+    required String description,
+    String? evidencePath,
+  }) async {
+    final db = await database;
+    await db.insert('reports', {
+      'trip_uuid': tripUuid,
+      'passenger_id': passengerId,
+      'issue_type': issueType,
+      'description': description,
+      'evidence_url': evidencePath,
+      'status': 'pending',
+      'reported_at': DateTime.now().toIso8601String(),
+      'is_synced': 0,
+    });
   }
 
   Future<void> saveTrip({

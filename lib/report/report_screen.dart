@@ -6,7 +6,9 @@ import 'widgets/reason_selector.dart';
 import 'widgets/details_input.dart';
 import 'widgets/other_reason_input.dart';
 import 'widgets/submit_button.dart';
-import 'widgets/image_proof.dart';
+import 'widgets/media_proof.dart';
+import '../core/database/local_database.dart';
+import '../core/database/sync_service.dart';
 
 class ReportScreen extends StatefulWidget {
   final Map<String, dynamic> trip;
@@ -20,8 +22,11 @@ class ReportScreen extends StatefulWidget {
 class _ReportScreenState extends State<ReportScreen> {
   final TextEditingController _detailsController = TextEditingController();
   final TextEditingController _otherReasonController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  final LocalDatabase _localDb = LocalDatabase();
   String? _selectedReason;
-  File? _proofImage;
+  File? _proofFile;
+  bool _isSubmitting = false;
 
   final List<String> _reasons = [
     "Incorrect Fare",
@@ -33,17 +38,56 @@ class _ReportScreenState extends State<ReportScreen> {
     "Other",
   ];
 
-  Future<void> _handleImagePick() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 70,
-    );
+  Future<void> _handleMediaPick(bool isVideo) async {
+    final XFile? pickedFile = isVideo
+        ? await _picker.pickVideo(source: ImageSource.gallery)
+        : await _picker.pickImage(
+            source: ImageSource.gallery,
+            imageQuality: 70,
+          );
 
     if (pickedFile != null) {
       setState(() {
-        _proofImage = File(pickedFile.path);
+        _proofFile = File(pickedFile.path);
       });
+    }
+  }
+
+  Future<void> _handleSubmit() async {
+    if (_selectedReason == null || _isSubmitting) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final String issueType = _selectedReason == "Other"
+          ? _otherReasonController.text
+          : _selectedReason!;
+
+      await _localDb.saveReport(
+        tripUuid: widget.trip['uuid'],
+        passengerId: widget.trip['passenger_id'].toString(),
+        issueType: issueType,
+        description: _detailsController.text,
+        evidencePath: _proofFile?.path,
+      );
+
+      SyncService().syncOnStart();
+
+      if (!mounted) return;
+
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Report submitted successfully."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } catch (e) {
+      setState(() => _isSubmitting = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.black),
+      );
     }
   }
 
@@ -87,31 +131,29 @@ class _ReportScreenState extends State<ReportScreen> {
                     ),
                     if (_selectedReason == "Other")
                       OtherReasonInput(controller: _otherReasonController),
-                    ImageProof(
-                      image: _proofImage,
-                      onPickImage: _handleImagePick,
-                      onRemoveImage: () => setState(() => _proofImage = null),
+                    MediaProof(
+                      file: _proofFile,
+                      onPickImage: () => _handleMediaPick(false),
+                      onPickVideo: () => _handleMediaPick(true),
+                      onRemove: () => setState(() => _proofFile = null),
                     ),
                     const SizedBox(height: 24),
                     DetailsInput(controller: _detailsController),
+                    const SizedBox(height: 32),
+                    _isSubmitting
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.redAccent,
+                            ),
+                          )
+                        : SubmitButton(onPressed: _handleSubmit),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: SubmitButton(
-        onPressed: () {
-          if (_selectedReason == null) return;
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Report submitted successfully."),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-        },
       ),
     );
   }

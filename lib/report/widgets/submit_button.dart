@@ -2,21 +2,28 @@ import 'package:flutter/material.dart';
 
 class SubmitButton extends StatelessWidget {
   final VoidCallback onPressed;
+  final bool isOverlay;
 
-  const SubmitButton({super.key, required this.onPressed});
+  const SubmitButton({
+    super.key,
+    required this.onPressed,
+    this.isOverlay = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
-      decoration: const BoxDecoration(color: Colors.transparent),
+      width: double.infinity,
+      padding: isOverlay
+          ? const EdgeInsets.symmetric(horizontal: 24, vertical: 20)
+          : const EdgeInsets.fromLTRB(24, 0, 24, 30),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.redAccent,
           foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          elevation: 8,
+          padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
