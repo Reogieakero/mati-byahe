@@ -17,6 +17,7 @@ class SyncService {
 
       await _syncTrips(db);
       await _syncReports(db);
+      await _syncDeletedReports(db);
     } catch (e) {
       print("Sync error: $e");
     }
@@ -53,7 +54,6 @@ class SyncService {
           whereArgs: [data['id']],
         );
       } catch (e) {
-        print("Trip sync error: $e");
         continue;
       }
     }
@@ -62,7 +62,7 @@ class SyncService {
   Future<void> _syncReports(db) async {
     final List<Map<String, dynamic>> unsyncedReports = await db.query(
       'reports',
-      where: 'is_synced = ?',
+      where: 'is_synced = ? AND is_deleted = 0',
       whereArgs: [0],
     );
 
@@ -70,7 +70,9 @@ class SyncService {
       try {
         String? finalMediaUrl = data['evidence_url'];
 
-        if (finalMediaUrl != null && finalMediaUrl.isNotEmpty) {
+        if (finalMediaUrl != null &&
+            finalMediaUrl.isNotEmpty &&
+            !finalMediaUrl.startsWith('http')) {
           final file = File(finalMediaUrl);
           if (await file.exists()) {
             final extension = finalMediaUrl.split('.').last;
@@ -91,15 +93,16 @@ class SyncService {
             .eq('uuid', data['trip_uuid'])
             .single();
 
-        await _supabase.from('reports').insert({
+        await _supabase.from('reports').upsert({
           'trip_id': tripData['id'],
+          'trip_uuid': data['trip_uuid'],
           'passenger_id': data['passenger_id'],
           'issue_type': data['issue_type'],
           'description': data['description'],
           'evidence_url': finalMediaUrl,
           'status': data['status'],
           'reported_at': data['reported_at'],
-        });
+        }, onConflict: 'trip_uuid');
 
         await db.update(
           'reports',
@@ -108,7 +111,26 @@ class SyncService {
           whereArgs: [data['id']],
         );
       } catch (e) {
-        print("Report sync error: $e");
+        continue;
+      }
+    }
+  }
+
+  Future<void> _syncDeletedReports(db) async {
+    final List<Map<String, dynamic>> deletedReports = await db.query(
+      'reports',
+      where: 'is_deleted = ?',
+      whereArgs: [1],
+    );
+
+    for (var data in deletedReports) {
+      try {
+        await _supabase
+            .from('reports')
+            .delete()
+            .eq('trip_uuid', data['trip_uuid']);
+        await _localDb.deleteReportPermanently(data['id']);
+      } catch (e) {
         continue;
       }
     }

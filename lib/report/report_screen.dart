@@ -151,7 +151,7 @@ class _ReportScreenState extends State<ReportScreen> {
         evidencePath: _proofFile?.path,
       );
 
-      SyncService().syncOnStart();
+      await SyncService().syncOnStart();
 
       if (!mounted) return;
 

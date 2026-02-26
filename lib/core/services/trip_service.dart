@@ -44,7 +44,6 @@ class TripService {
         }
       }
 
-      // 2. PULL: Fetch from cloud based on passenger_id (UUID)
       final cloudTrips = await _supabase
           .from('trips')
           .select()

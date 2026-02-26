@@ -16,10 +16,10 @@ class LocalDatabase {
     String pathName = join(dbPath, 'byahe.db');
     return await openDatabase(
       pathName,
-      version: 17,
+      version: 19,
       onCreate: (db, version) async => await _createTables(db),
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 17) {
+        if (oldVersion < 19) {
           await db.execute('DROP TABLE IF EXISTS reports');
           await _createReportsTable(db);
         }
@@ -73,14 +73,15 @@ class LocalDatabase {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS reports(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        trip_uuid TEXT,
+        trip_uuid TEXT UNIQUE,
         passenger_id TEXT,
         issue_type TEXT NOT NULL,
         description TEXT NOT NULL,
         evidence_url TEXT,
         status TEXT DEFAULT 'pending',
         reported_at TEXT NOT NULL,
-        is_synced INTEGER DEFAULT 0
+        is_synced INTEGER DEFAULT 0,
+        is_deleted INTEGER DEFAULT 0
       )
     ''');
   }
@@ -102,7 +103,8 @@ class LocalDatabase {
       'status': 'pending',
       'reported_at': DateTime.now().toIso8601String(),
       'is_synced': 0,
-    });
+      'is_deleted': 0,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> saveTrip({
@@ -202,14 +204,29 @@ class LocalDatabase {
     final db = await database;
     return await db.query(
       'reports',
-      where: 'passenger_id = ?',
+      where: 'passenger_id = ? AND is_deleted = 0',
       whereArgs: [passengerId],
-      orderBy: 'id DESC', // Show newest reports first
+      orderBy: 'id DESC',
     );
   }
 
-  Future<int> deleteReport(int id) async {
+  Future<int> deleteReportPermanently(int id) async {
     final db = await database;
     return await db.delete('reports', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> markReportAsDeleted(int id) async {
+    final db = await database;
+    await db.update(
+      'reports',
+      {'is_deleted': 1, 'is_synced': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> clearAllReports() async {
+    final db = await database;
+    await db.delete('reports');
   }
 }
