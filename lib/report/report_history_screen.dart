@@ -17,7 +17,6 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
   Future<List<Map<String, dynamic>>> _loadHistory() async {
     final user = _supabase.auth.currentUser;
     if (user == null) return [];
-    // Fetches reports from the local SQLite database for the logged-in user
     return await _localDb.getReportHistory(user.id);
   }
 
@@ -29,7 +28,6 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // Uses the same gradient logic as ReportScreen but with Red accent colors
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -44,7 +42,7 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
         ),
         child: Column(
           children: [
-            _buildAppBar(context),
+            _buildAppBar(),
             Expanded(
               child: FutureBuilder<List<Map<String, dynamic>>>(
                 future: _loadHistory(),
@@ -79,8 +77,9 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar() {
     return AppBar(
+      automaticallyImplyLeading: false,
       title: const Text(
         "REPORT HISTORY",
         style: TextStyle(
@@ -93,14 +92,12 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
       centerTitle: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          size: 18,
-          color: AppColors.darkNavy,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh, size: 20, color: AppColors.darkNavy),
+          onPressed: () => setState(() {}),
         ),
-        onPressed: () => Navigator.pop(context),
-      ),
+      ],
     );
   }
 
