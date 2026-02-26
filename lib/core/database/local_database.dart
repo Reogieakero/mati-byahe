@@ -1,10 +1,18 @@
+library local_database;
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:uuid/uuid.dart';
 
+part 'local_database_trip.dart';
+part 'local_database_report.dart';
+part 'local_database_active_fare.dart';
+part 'local_database_user.dart';
+
 class LocalDatabase {
   static Database? _database;
 
+  /// Singleton-like getter that opens the database only once.
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDB();
@@ -38,6 +46,7 @@ class LocalDatabase {
         is_synced INTEGER DEFAULT 0
       )
     ''');
+
     await db.execute('''
       CREATE TABLE IF NOT EXISTS active_fare(
         email TEXT PRIMARY KEY,
@@ -48,6 +57,7 @@ class LocalDatabase {
         start_time TEXT
       )
     ''');
+
     await db.execute('''
       CREATE TABLE IF NOT EXISTS trips(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,6 +76,8 @@ class LocalDatabase {
         is_synced INTEGER DEFAULT 0
       )
     ''');
+
+    // reports table creation is reused during upgrades as well
     await _createReportsTable(db);
   }
 
@@ -84,149 +96,5 @@ class LocalDatabase {
         is_deleted INTEGER DEFAULT 0
       )
     ''');
-  }
-
-  Future<void> saveReport({
-    required String tripUuid,
-    required String passengerId,
-    required String issueType,
-    required String description,
-    String? evidencePath,
-  }) async {
-    final db = await database;
-    await db.insert('reports', {
-      'trip_uuid': tripUuid,
-      'passenger_id': passengerId,
-      'issue_type': issueType,
-      'description': description,
-      'evidence_url': evidencePath,
-      'status': 'pending',
-      'reported_at': DateTime.now().toIso8601String(),
-      'is_synced': 0,
-      'is_deleted': 0,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
-  Future<void> saveTrip({
-    required String email,
-    required String pickup,
-    required String dropOff,
-    required double fare,
-    required String gasTier,
-    String? passengerId,
-    String? driverId,
-    String? driverName,
-    String? startTime,
-    String? endTime,
-  }) async {
-    final db = await database;
-    await db.insert('trips', {
-      'uuid': const Uuid().v4(),
-      'passenger_id': passengerId,
-      'driver_id': driverId,
-      'driver_name': driverName,
-      'email': email,
-      'pickup': pickup,
-      'drop_off': dropOff,
-      'fare': fare,
-      'gas_tier': gasTier,
-      'date': DateTime.now().toIso8601String(),
-      'start_time': startTime,
-      'end_time': endTime,
-      'is_synced': 0,
-    });
-  }
-
-  Future<void> saveActiveFare({
-    required String email,
-    required double fare,
-    required String pickup,
-    required String dropOff,
-    required String gasTier,
-    required String startTime,
-  }) async {
-    final db = await database;
-    await db.insert('active_fare', {
-      'email': email,
-      'fare': fare,
-      'pickup': pickup,
-      'drop_off': dropOff,
-      'gas_tier': gasTier,
-      'start_time': startTime,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
-  Future<List<Map<String, dynamic>>> getTrips(String email) async {
-    final db = await database;
-    return await db.query(
-      'trips',
-      where: 'email = ?',
-      whereArgs: [email],
-      orderBy: 'date DESC',
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getTripsByPassengerId(
-    String passengerId,
-  ) async {
-    final db = await database;
-    return await db.query(
-      'trips',
-      where: 'passenger_id = ?',
-      whereArgs: [passengerId],
-      orderBy: 'date DESC',
-    );
-  }
-
-  Future<Map<String, dynamic>?> getActiveFare(String email) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'active_fare',
-      where: 'email = ?',
-      whereArgs: [email],
-    );
-    return maps.isNotEmpty ? maps.first : null;
-  }
-
-  Future<void> clearActiveFare(String email) async {
-    final db = await database;
-    await db.delete('active_fare', where: 'email = ?', whereArgs: [email]);
-  }
-
-  Future<int> deleteTrip(String uuid) async {
-    final db = await database;
-    return await db.delete('trips', where: 'uuid = ?', whereArgs: [uuid]);
-  }
-
-  Future<List<Map<String, dynamic>>> getReportHistory(
-    String passengerId,
-  ) async {
-    final db = await database;
-    return await db.query(
-      'reports',
-      where: 'passenger_id = ? AND is_deleted = 0',
-      whereArgs: [passengerId],
-      orderBy: 'id DESC',
-    );
-  }
-
-  Future<int> deleteReportPermanently(int id) async {
-    final db = await database;
-    return await db.delete('reports', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<void> markReportAsDeleted(int id) async {
-    final db = await database;
-    await db.update(
-      'reports',
-      {'is_deleted': 1, 'is_synced': 0},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<void> clearAllReports() async {
-    final db = await database;
-    await db.delete('reports');
   }
 }
