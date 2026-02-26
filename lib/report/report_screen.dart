@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/constant/app_colors.dart';
 import '../components/confirmation_dialog.dart';
-import 'widgets/reason_selector.dart';
-import 'widgets/details_input.dart';
-import 'widgets/other_reason_input.dart';
-import 'widgets/submit_button.dart';
-import 'widgets/media_proof.dart';
+import 'widgets/reported/reason_selector.dart';
+import 'widgets/reported/details_input.dart';
+import 'widgets/reported/other_reason_input.dart';
+import 'widgets/reported/submit_button.dart';
+import 'widgets/reported/media_proof.dart';
 import '../core/database/local_database.dart';
 import '../core/database/sync_service.dart';
 

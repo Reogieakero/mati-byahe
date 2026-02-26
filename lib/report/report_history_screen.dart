@@ -4,6 +4,7 @@ import '../core/database/local_database.dart';
 import 'widgets/report_history_header.dart';
 import 'widgets/report_history_tile.dart';
 import 'widgets/report_history_empty_state.dart';
+import '../components/confirmation_dialog.dart';
 
 class ReportHistoryScreen extends StatefulWidget {
   const ReportHistoryScreen({super.key});
@@ -59,10 +60,32 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
                   }
 
                   return ListView.builder(
-                    padding: EdgeInsets.zero,
+                    padding: const EdgeInsets.only(bottom: 80, top: 8),
+                    physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: snapshot.data!.length,
                     itemBuilder: (context, index) {
-                      return ReportHistoryTile(report: snapshot.data![index]);
+                      final report = snapshot.data![index];
+                      return ReportHistoryTile(
+                        report: report,
+                        onViewDetails: () {
+                          // Handle view details
+                        },
+                        onDelete: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => ConfirmationDialog(
+                              title: "Delete Report",
+                              content:
+                                  "Are you sure you want to delete this report record?",
+                              confirmText: "Delete",
+                              onConfirm: () async {
+                                await _localDb.deleteReport(report['id']);
+                                if (mounted) setState(() {});
+                              },
+                            ),
+                          );
+                        },
+                      );
                     },
                   );
                 },

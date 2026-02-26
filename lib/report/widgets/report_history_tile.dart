@@ -20,7 +20,7 @@ class ReportHistoryTile extends StatelessWidget {
     if (dateStr == null) return "";
     try {
       final DateTime date = DateTime.parse(dateStr).toLocal();
-      return DateFormat('MMM dd, yyyy').format(date);
+      return DateFormat('MMM dd • hh:mm a').format(date);
     } catch (e) {
       return "";
     }
@@ -32,14 +32,14 @@ class ReportHistoryTile extends StatelessWidget {
       onTap: onViewDetails,
       onLongPress: () => menuKey.currentState?.showButtonMenu(),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: const BoxDecoration(
+          color: Colors.transparent,
           border: Border(
             bottom: BorderSide(color: AppColors.softWhite, width: 0.8),
           ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               padding: const EdgeInsets.all(10),
@@ -53,35 +53,24 @@ class ReportHistoryTile extends StatelessWidget {
                 size: 20,
               ),
             ),
-            const SizedBox(width: 15),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        (report['issue_type']?.toString() ?? "REPORT")
-                            .toUpperCase(),
-                        style: const TextStyle(
-                          color: AppColors.darkNavy,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      Text(
-                        _formatDate(report['reported_at']),
-                        style: const TextStyle(
-                          color: AppColors.textGrey,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    (report['issue_type']?.toString() ?? "REPORT")
+                        .toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkNavy,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     report['description'] ?? "No details provided.",
                     maxLines: 1,
@@ -92,54 +81,65 @@ class ReportHistoryTile extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Text(
-                        "TRIP ID: ${report['trip_uuid'].toString().toUpperCase().substring(0, 8)}",
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textGrey,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      if (report['evidence_path'] != null)
-                        const Icon(
-                          Icons.attach_file,
-                          size: 12,
-                          color: AppColors.textGrey,
-                        ),
-                    ],
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatDate(report['reported_at']),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textGrey.withOpacity(0.6),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
             ),
-            PopupMenuButton<String>(
-              key: menuKey,
-              icon: const Icon(
-                Icons.more_vert,
-                color: AppColors.textGrey,
-                size: 20,
-              ),
-              padding: EdgeInsets.zero,
-              onSelected: (value) {
-                if (value == 'view') onViewDetails?.call();
-                if (value == 'delete') onDelete?.call();
-              },
-              itemBuilder: (context) => [
-                _buildMenuItem(
-                  value: 'view',
-                  icon: Icons.visibility_outlined,
-                  label: 'VIEW DETAILS',
-                  color: AppColors.darkNavy,
-                ),
-                _buildMenuItem(
-                  value: 'delete',
-                  icon: Icons.delete_outline_rounded,
-                  label: 'DELETE',
-                  color: Colors.redAccent,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  height: 20,
+                ), // Matches fare text height in HistoryTile
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    useMaterial3: true,
+                    hoverColor: Colors.transparent,
+                    splashColor: Colors.transparent,
+                  ),
+                  child: PopupMenuButton<String>(
+                    key: menuKey,
+                    padding: EdgeInsets.zero,
+                    elevation: 4,
+                    shadowColor: Colors.black26,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    color: Colors.white,
+                    surfaceTintColor: Colors.white,
+                    icon: const Icon(
+                      Icons.more_horiz, // Changed to match HistoryTile
+                      color: AppColors.textGrey,
+                      size: 20,
+                    ),
+                    onSelected: (value) {
+                      if (value == 'view') onViewDetails?.call();
+                      if (value == 'delete') onDelete?.call();
+                    },
+                    itemBuilder: (context) => [
+                      _buildMenuItem(
+                        value: 'view',
+                        icon: Icons.visibility_outlined,
+                        label: 'VIEW DETAILS',
+                        color: AppColors.darkNavy,
+                      ),
+                      _buildMenuItem(
+                        value: 'delete',
+                        icon: Icons.delete_outline_rounded,
+                        label: 'DELETE',
+                        color: Colors.redAccent,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
