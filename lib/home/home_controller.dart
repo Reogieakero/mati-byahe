@@ -5,7 +5,7 @@ import '../core/database/sync_service.dart';
 import '../core/services/trip_service.dart';
 import '../core/constant/app_colors.dart';
 import '../signup/verification_screen.dart';
-import 'widgets/confirmation_dialog.dart';
+import '../components/confirmation_dialog.dart';
 
 class HomeController {
   final LocalDatabase _localDb = LocalDatabase();

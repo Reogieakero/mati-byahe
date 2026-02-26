@@ -5,7 +5,8 @@ import '../core/database/local_database.dart';
 import '../core/services/trip_service.dart';
 import 'widgets/history_header.dart';
 import 'widgets/history_tile.dart';
-import '../components/confirmation_dialog.dart';
+import 'history_details_screen.dart';
+import '../../components/confirmation_dialog.dart';
 
 class HistoryScreen extends StatefulWidget {
   final String email;
@@ -89,6 +90,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               final trip = trips[index];
                               return HistoryTile(
                                 trip: trip,
+                                onViewDetails: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          HistoryDetailsScreen(trip: trip),
+                                    ),
+                                  );
+                                },
                                 onDelete: () {
                                   showDialog(
                                     context: context,
@@ -106,7 +116,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     ),
                                   );
                                 },
-                                onViewDetails: () {},
                               );
                             },
                           ),
