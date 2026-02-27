@@ -21,16 +21,33 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
   final SyncService _syncService = SyncService();
   final ReportService _reportService = ReportService();
 
+  Future<List<Map<String, dynamic>>>? _historyFuture;
+
   @override
   void initState() {
     super.initState();
+    _refreshData();
     _triggerSync();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _refreshData();
+  }
+
+  void _refreshData() {
+    if (mounted) {
+      setState(() {
+        _historyFuture = _loadHistory();
+      });
+    }
   }
 
   Future<void> _triggerSync() async {
     await _syncService.syncOnStart();
     await _reportService.syncReports();
-    if (mounted) setState(() {});
+    _refreshData();
   }
 
   Future<List<Map<String, dynamic>>> _loadHistory() async {
@@ -60,53 +77,65 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
         ),
         child: Column(
           children: [
-            ReportHistoryAppBar(onRefresh: () => _triggerSync()),
+            const ReportHistoryAppBar(),
             Expanded(
               child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _loadHistory(),
+                future: _historyFuture,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      !snapshot.hasData) {
                     return const Center(
                       child: CircularProgressIndicator(color: Colors.redAccent),
                     );
                   }
 
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const ReportHistoryEmptyState();
+                    return RefreshIndicator(
+                      onRefresh: _triggerSync,
+                      color: Colors.redAccent,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.7,
+                          child: const ReportHistoryEmptyState(),
+                        ),
+                      ),
+                    );
                   }
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 100, top: 8),
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      final report = snapshot.data![index];
-                      return ReportHistoryTile(
-                        report: report,
-                        onViewDetails: () {},
-                        onDelete: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => ConfirmationDialog(
-                              title: "Delete Report",
-                              content:
-                                  "Are you sure you want to delete this report record?",
-                              confirmText: "Delete",
-                              onConfirm: () async {
-                                await _reportService.deleteReport(
-                                  report['id'],
-                                  report['trip_uuid'],
-                                );
-                                await _syncService.syncOnStart();
-                                if (mounted) {
-                                  setState(() {});
-                                }
-                              },
-                            ),
-                          );
-                        },
-                      );
-                    },
+                  return RefreshIndicator(
+                    onRefresh: _triggerSync,
+                    color: Colors.redAccent,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 100, top: 8),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: snapshot.data!.length,
+                      itemBuilder: (context, index) {
+                        final report = snapshot.data![index];
+                        return ReportHistoryTile(
+                          report: report,
+                          onViewDetails: () {},
+                          onDelete: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => ConfirmationDialog(
+                                title: "Delete Report",
+                                content:
+                                    "Are you sure you want to delete this report record?",
+                                confirmText: "Delete",
+                                onConfirm: () async {
+                                  await _reportService.deleteReport(
+                                    report['id'],
+                                    report['trip_uuid'],
+                                  );
+                                  _triggerSync();
+                                },
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   );
                 },
               ),

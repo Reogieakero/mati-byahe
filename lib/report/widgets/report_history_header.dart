@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constant/app_colors.dart';
 
 class ReportHistoryAppBar extends StatelessWidget {
-  final VoidCallback onRefresh;
-
-  const ReportHistoryAppBar({super.key, required this.onRefresh});
+  const ReportHistoryAppBar({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +20,6 @@ class ReportHistoryAppBar extends StatelessWidget {
       centerTitle: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh, size: 20, color: AppColors.darkNavy),
-          onPressed: onRefresh,
-        ),
-      ],
     );
   }
 }

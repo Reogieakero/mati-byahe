@@ -156,7 +156,7 @@ class _ReportScreenState extends State<ReportScreen> {
       if (!mounted) return;
 
       _showSuccessNotification(context);
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       setState(() => _isSubmitting = false);
       if (!mounted) return;
