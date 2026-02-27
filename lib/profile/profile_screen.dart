@@ -2,12 +2,23 @@ import 'package:flutter/material.dart';
 import '../core/constant/app_colors.dart';
 import '../core/services/auth_service.dart';
 import '../login/login_screen.dart';
+import 'widgets/profile_header.dart';
+import 'widgets/profile_menu_item.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   final String email;
   final String role;
+  final String? name;
+  final String? phoneNumber;
 
-  const ProfileScreen({super.key, required this.email, required this.role});
+  const ProfileScreen({
+    super.key,
+    required this.email,
+    required this.role,
+    this.name,
+    this.phoneNumber,
+  });
 
   static const Color backgroundColor = Color(0xFFF8F9FB);
 
@@ -30,21 +41,7 @@ class ProfileScreen extends StatelessWidget {
       backgroundColor: backgroundColor,
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.primaryBlue.withOpacity(0.12),
-                    backgroundColor,
-                  ],
-                  stops: const [0.0, 0.4],
-                ),
-              ),
-            ),
-          ),
+          _buildGradientBackground(),
           SafeArea(
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(),
@@ -55,18 +52,25 @@ class ProfileScreen extends StatelessWidget {
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: 20),
-                      _buildProfileHeader(),
+                      ProfileHeader(email: email),
                       const SizedBox(height: 32),
                       _buildSectionLabel("ACCOUNT OVERVIEW"),
                       _buildContentCard(
-                        child: Column(
-                          children: [
-                            _buildProfileOption(
-                              icon: Icons.settings_suggest_rounded,
-                              title: 'Settings',
-                              onTap: () {},
-                            ),
-                          ],
+                        child: ProfileMenuItem(
+                          icon: Icons.person_outline_rounded,
+                          title: 'Edit Profile',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => EditProfileScreen(
+                                  initialName: name ?? "",
+                                  initialEmail: email,
+                                  initialPhone: phoneNumber ?? "",
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -74,19 +78,19 @@ class ProfileScreen extends StatelessWidget {
                       _buildContentCard(
                         child: Column(
                           children: [
-                            _buildProfileOption(
+                            ProfileMenuItem(
                               icon: Icons.help_outline_rounded,
                               title: 'Help Center',
                               onTap: () {},
                             ),
                             _buildDivider(),
-                            _buildProfileOption(
+                            ProfileMenuItem(
                               icon: Icons.info_outline_rounded,
                               title: 'Legal & Privacy',
                               onTap: () {},
                             ),
                             _buildDivider(),
-                            _buildProfileOption(
+                            ProfileMenuItem(
                               icon: Icons.logout_rounded,
                               title: 'Logout',
                               titleColor: Colors.redAccent,
@@ -107,14 +111,32 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildGradientBackground() {
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.primaryBlue.withValues(alpha: 0.12),
+              backgroundColor,
+            ],
+            stops: const [0.0, 0.4],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSliverAppBar() {
-    return SliverAppBar(
+    return const SliverAppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
       pinned: true,
       centerTitle: true,
       automaticallyImplyLeading: false,
-      title: const Text(
+      title: Text(
         "MY ACCOUNT",
         style: TextStyle(
           fontSize: 12,
@@ -126,69 +148,16 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileHeader() {
-    return Column(
-      children: [
-        Center(
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.primaryBlue.withOpacity(0.2),
-                width: 2,
-              ),
-            ),
-            child: const CircleAvatar(
-              radius: 50,
-              backgroundColor: AppColors.primaryBlue,
-              child: Icon(Icons.person_rounded, size: 55, color: Colors.white),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          email,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: AppColors.darkNavy,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.primaryBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(100),
-          ),
-          child: const Text(
-            "PASSENGER",
-            style: TextStyle(
-              color: AppColors.primaryBlue,
-              fontWeight: FontWeight.w900,
-              fontSize: 10,
-              letterSpacing: 1,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildSectionLabel(String title) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 4, bottom: 12),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            color: AppColors.textGrey.withOpacity(0.7),
-            letterSpacing: 1.5,
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textGrey.withValues(alpha: 0.7),
+          letterSpacing: 1.5,
         ),
       ),
     );
@@ -200,7 +169,7 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x05000000),
@@ -213,43 +182,9 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileOption({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color? titleColor,
-    Color? iconColor,
-  }) {
-    return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: (iconColor ?? AppColors.primaryBlue).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, size: 20, color: iconColor ?? AppColors.primaryBlue),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: titleColor ?? AppColors.darkNavy,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: AppColors.textGrey,
-        size: 20,
-      ),
-    );
-  }
-
   Widget _buildDivider() => Divider(
     height: 1,
-    color: Colors.grey.withOpacity(0.08),
+    color: Colors.grey.withValues(alpha: 0.08),
     indent: 56,
     endIndent: 16,
   );

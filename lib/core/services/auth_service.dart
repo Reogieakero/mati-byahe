@@ -1,58 +1,63 @@
-import 'dart:io';
+import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../database/local_database.dart';
+import '../database/local_database_user.dart'; // Import for extension methods
 import '../models/user_model.dart';
-import 'package:sqflite/sqflite.dart'; // Add this for ConflictAlgorithm
 
 class AuthService {
   final LocalDatabase _localDb = LocalDatabase();
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  Future<void> saveUserLocally(Map<String, dynamic> userData) async {
+    final db = await _localDb.database;
+    await db.insert('users', {
+      'uuid': userData['id'],
+      'phone_number':
+          userData['phone_number'] ??
+          userData['user_metadata']?['phone_number'] ??
+          '',
+      'name': userData['name'] ?? userData['user_metadata']?['full_name'] ?? '',
+      'email': userData['email'],
+      'role':
+          userData['role'] ?? userData['user_metadata']?['role'] ?? 'passenger',
+      'password_hash': 'stored_remotely',
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+      'is_synced': 1,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
   Future<UserModel?> login(String email, String password) async {
     try {
-      // 1. TRY CLOUD LOGIN FIRST
       final AuthResponse res = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
       if (res.user != null) {
-        // Get the role from Supabase metadata (stored during registration)
-        final String role = res.user!.userMetadata?['role'] ?? 'passenger';
-
-        // 2. RE-SYNC LOCAL DATABASE
-        // This "heals" the app after a reinstall by putting the user back in SQLite
-        final db = await _localDb.database;
-        await db.insert('users', {
+        final userData = {
           'id': res.user!.id,
-          'email': email,
-          'password':
-              password, // Optional: only if you need offline login later
-          'role': role,
-          'is_verified': 1,
-          'is_synced': 1,
-        }, conflictAlgorithm: ConflictAlgorithm.replace);
+          'email': res.user!.email,
+          'phone_number': res.user!.userMetadata?['phone_number'],
+          'name': res.user!.userMetadata?['full_name'],
+          'role': res.user!.userMetadata?['role'] ?? 'passenger',
+        };
 
-        return UserModel(email: email, role: role);
+        await saveUserLocally(userData);
+        return UserModel(email: email, role: userData['role'] as String);
       }
-    } on AuthException catch (e) {
-      // If cloud login fails (e.g., wrong password or no internet),
-      // check the local database as a fallback
-      print("Cloud login failed: ${e.message}");
-      return await _attemptLocalLogin(email, password);
     } catch (e) {
       return await _attemptLocalLogin(email, password);
     }
     return null;
   }
 
-  // Fallback for offline login
   Future<UserModel?> _attemptLocalLogin(String email, String password) async {
     final db = await _localDb.database;
     final List<Map<String, dynamic>> localUsers = await db.query(
       'users',
-      where: 'email = ? AND password = ?',
-      whereArgs: [email, password],
+      where: 'email = ?',
+      whereArgs: [email],
     );
 
     if (localUsers.isNotEmpty) {
@@ -62,6 +67,13 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await _supabase.auth.signOut();
+    try {
+      await _supabase.auth.signOut();
+      // Optional: If you want to clear local user data on logout, uncomment below:
+      // final db = await _localDb.database;
+      // await db.delete('users');
+    } catch (e) {
+      print("Error during sign out: $e");
+    }
   }
 }
