@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/constant/app_colors.dart';
 import '../core/database/local_database.dart';
 import '../core/database/sync_service.dart';
+import '../components/confirmation_dialog.dart';
 
 class SetPinScreen extends StatefulWidget {
   const SetPinScreen({super.key});
@@ -24,7 +25,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
       setState(() => _pin += value);
     }
     if (_pin.length == _pinLength && !_isSaving) {
-      _handleSavePin();
+      _showConfirmDialog();
     }
   }
 
@@ -34,11 +35,32 @@ class _SetPinScreenState extends State<SetPinScreen> {
     }
   }
 
+  void _showConfirmDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ConfirmationDialog(
+        title: "Security Lock",
+        content:
+            "Are you sure you want to set this 4-digit PIN as your login credential?",
+        confirmText: "Set PIN",
+        onConfirm: _handleSavePin,
+      ),
+    ).then((_) {
+      if (!_isSaving && _pin.length == _pinLength) {
+        setState(() => _pin = "");
+      }
+    });
+  }
+
   Future<void> _handleSavePin() async {
     setState(() => _isSaving = true);
     final user = _supabase.auth.currentUser;
 
-    if (user == null) return;
+    if (user == null) {
+      setState(() => _isSaving = false);
+      return;
+    }
 
     try {
       await _localDb.updateLocalPin(user.id, _pin);
@@ -46,15 +68,23 @@ class _SetPinScreenState extends State<SetPinScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("PIN saved and synced to cloud")),
+          const SnackBar(
+            content: Text("PIN secured locally and synced successfully!"),
+            backgroundColor: AppColors.primaryBlue,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
         setState(() {
           _pin = "";
           _isSaving = false;
@@ -96,7 +126,7 @@ class _SetPinScreenState extends State<SetPinScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              "Your PIN is stored locally and synced to your account.",
+              "This PIN will be required to access your account.",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
