@@ -7,8 +7,10 @@ import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/database/sync_service.dart';
 import 'core/services/fare_service.dart';
+import 'core/services/auth_service.dart';
 import 'onboarding/onboarding_screen.dart';
 import 'login/login_screen.dart';
+import 'navigation/main_navigation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,9 +23,7 @@ void main() async {
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    debugPrint(
-      "Warning: .env file not found. Using environment variables or defaults: $e",
-    );
+    debugPrint("Env error");
   }
 
   await Supabase.initialize(
@@ -33,22 +33,25 @@ void main() async {
 
   await FareService.init();
 
-  try {
-    await SyncService().syncOnStart();
-  } catch (e) {
-    debugPrint("Sync failed: $e");
-  }
-
   final prefs = await SharedPreferences.getInstance();
   final bool onboardingCompleted =
       prefs.getBool('onboarding_completed') ?? false;
 
-  runApp(MyApp(onboardingCompleted: onboardingCompleted));
+  Map<String, dynamic>? activeUser;
+  if (onboardingCompleted) {
+    activeUser = await AuthService().getActiveSession();
+  }
+
+  runApp(
+    MyApp(onboardingCompleted: onboardingCompleted, activeUser: activeUser),
+  );
 }
 
 class MyApp extends StatelessWidget {
   final bool onboardingCompleted;
-  const MyApp({super.key, required this.onboardingCompleted});
+  final Map<String, dynamic>? activeUser;
+
+  const MyApp({super.key, required this.onboardingCompleted, this.activeUser});
 
   @override
   Widget build(BuildContext context) {
@@ -58,10 +61,22 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.black),
         useMaterial3: true,
       ),
-      home: onboardingCompleted
-          ? const LoginScreen()
-          : const OnboardingScreen(),
+      home: _getInitialScreen(),
       debugShowCheckedModeBanner: false,
     );
+  }
+
+  Widget _getInitialScreen() {
+    if (!onboardingCompleted) return const OnboardingScreen();
+
+    // If activeUser exists, skip PIN and go to Main Navigation
+    if (activeUser != null) {
+      return MainNavigation(
+        email: activeUser!['email'],
+        role: activeUser!['role'],
+      );
+    }
+
+    return const LoginScreen();
   }
 }
