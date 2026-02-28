@@ -13,4 +13,5 @@ class UserModel {
 
   bool get isDriver => role.toLowerCase() == 'driver';
   bool get isPassenger => role.toLowerCase() == 'passenger';
+  bool get isRider => role.toLowerCase() == 'rider';
 }

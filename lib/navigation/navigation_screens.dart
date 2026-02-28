@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../home/home_screen.dart';
+import '../home/rider_home.dart';
 import '../history/history_screen.dart';
 import '../profile/profile_screen.dart';
 import '../report/report_history_screen.dart';
@@ -7,7 +8,9 @@ import '../core/constant/app_texts.dart';
 
 class NavigationScreens {
   static List<Widget> getScreens(String email, String role) {
-    final bool isDriver = role.toLowerCase() == 'driver';
+    final String r = role.toLowerCase();
+    final bool isDriver = r == 'driver';
+    final bool isRider = r == 'rider';
 
     if (isDriver) {
       return [
@@ -19,6 +22,17 @@ class NavigationScreens {
       ];
     }
 
+    if (isRider) {
+      return [
+        RiderHomeScreen(email: email),
+        HistoryScreen(email: email),
+        _placeholder("SCANNER"),
+        const ReportHistoryScreen(),
+        ProfileScreen(email: email, role: role),
+      ];
+    }
+
+    // default passenger
     return [
       HomeScreen(email: email, role: role),
       HistoryScreen(email: email),
