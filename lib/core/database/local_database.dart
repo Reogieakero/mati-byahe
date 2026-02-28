@@ -23,12 +23,22 @@ class LocalDatabase {
     String pathName = join(dbPath, 'byahe.db');
     return await openDatabase(
       pathName,
-      version: 20,
+      version: 21,
       onCreate: (db, version) async => await _createTables(db),
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 20) {
           await db.execute('DROP TABLE IF EXISTS reports');
           await _createReportsTable(db);
+        }
+
+        if (oldVersion < 21) {
+          try {
+            await db.execute(
+              'ALTER TABLE reports ADD COLUMN is_unreported INTEGER DEFAULT 0',
+            );
+          } catch (e) {
+            print("Migration Error: $e");
+          }
         }
       },
     );
@@ -92,7 +102,8 @@ class LocalDatabase {
         status TEXT DEFAULT 'pending',
         reported_at TEXT NOT NULL,
         is_synced INTEGER DEFAULT 0,
-        is_deleted INTEGER DEFAULT 0
+        is_deleted INTEGER DEFAULT 0,
+        is_unreported INTEGER DEFAULT 0
       )
     ''');
   }

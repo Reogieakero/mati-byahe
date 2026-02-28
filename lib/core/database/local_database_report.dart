@@ -21,6 +21,7 @@ extension ReportDatabase on LocalDatabase {
       'reported_at': DateTime.now().toIso8601String(),
       'is_synced': 0,
       'is_deleted': 0,
+      'is_unreported': 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -30,7 +31,7 @@ extension ReportDatabase on LocalDatabase {
     final db = await database;
     return await db.query(
       'reports',
-      where: 'passenger_id = ? AND is_deleted = 0',
+      where: 'passenger_id = ? AND is_deleted = 0 AND is_unreported = 0',
       whereArgs: [passengerId],
       orderBy: 'id DESC',
     );
@@ -51,6 +52,16 @@ extension ReportDatabase on LocalDatabase {
     );
   }
 
+  Future<void> markAsUnreported(int id) async {
+    final db = await database;
+    await db.update(
+      'reports',
+      {'is_unreported': 1, 'is_synced': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<void> clearAllReports() async {
     final db = await database;
     await db.delete('reports');
@@ -60,7 +71,7 @@ extension ReportDatabase on LocalDatabase {
     final db = await database;
     final result = await db.query(
       'reports',
-      where: 'trip_uuid = ?',
+      where: 'trip_uuid = ? AND is_unreported = 0 AND is_deleted = 0',
       whereArgs: [tripUuid],
     );
     return result.isNotEmpty;

@@ -16,6 +16,7 @@ class SyncService {
       final db = await _localDb.database;
       await _syncTrips(db);
       await _syncReports(db);
+      await _syncDeletedReports(db);
     } catch (e) {
       debugPrint("Sync error: $e");
     }
@@ -37,14 +38,13 @@ class SyncService {
         params: {'p_id': currentUser.id, 'p_email': currentUser.email},
       );
     } catch (e) {
-      debugPrint("Profile RPC failed, attempting manual upsert: $e");
       try {
         await _supabase.from('profiles').upsert({
           'id': currentUser.id,
           'email': currentUser.email,
         }, onConflict: 'id');
       } catch (e2) {
-        debugPrint("Manual upsert also failed: $e2");
+        debugPrint("Manual upsert failed: $e2");
       }
     }
 
@@ -79,9 +79,12 @@ class SyncService {
   Future<void> _syncReports(db) async {
     final List<Map<String, dynamic>> unsyncedReports = await db.query(
       'reports',
-      where: 'is_synced = ?',
-      whereArgs: [0],
+      where: 'is_synced = ? AND is_deleted = ?',
+      whereArgs: [0, 0],
     );
+
+    final currentUser = _supabase.auth.currentUser;
+    if (currentUser == null) return;
 
     for (var data in unsyncedReports) {
       try {
@@ -96,11 +99,12 @@ class SyncService {
         await _supabase.from('reports').upsert({
           'trip_id': tripData['id'],
           'trip_uuid': data['trip_uuid'],
-          'passenger_id': data['passenger_id'],
+          'passenger_id': currentUser.id,
           'issue_type': data['issue_type'],
           'description': data['description'],
           'status': data['status'],
           'reported_at': data['reported_at'],
+          'is_unreported': data['is_unreported'] == 1,
         }, onConflict: 'trip_uuid');
 
         await db.update(

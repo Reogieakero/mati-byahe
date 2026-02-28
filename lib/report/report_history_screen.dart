@@ -46,7 +46,6 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
 
   Future<void> _triggerSync() async {
     await _syncService.syncOnStart();
-    await _reportService.syncReports();
     _refreshData();
   }
 
@@ -133,13 +132,10 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
                                     "Are you sure you want to unreport this trip? This will remove it from your visible history.",
                                 confirmText: "Unreport",
                                 onConfirm: () async {
-                                  await _localDb.markReportAsDeleted(
-                                    report['id'],
-                                  );
+                                  await _localDb.markAsUnreported(report['id']);
                                   if (mounted) {
-                                    final nav = Navigator.of(dialogContext);
-                                    if (nav.canPop()) nav.pop();
                                     _refreshData();
+                                    _syncService.syncOnStart();
                                   }
                                 },
                               ),
