@@ -130,6 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
+<<<<<<< Updated upstream
       backgroundColor: const Color(0xFFF8F9FB),
       body: Stack(
         children: [
@@ -231,10 +232,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ]),
+=======
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('My Account'),
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.darkNavy,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 30),
+            const Center(
+              child: CircleAvatar(
+                radius: 55,
+                backgroundColor: AppColors.primaryBlue,
+                child: CircleAvatar(
+                  radius: 52,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    Icons.person,
+                    size: 60,
+                    color: AppColors.primaryBlue,
+>>>>>>> Stashed changes
                   ),
                 ),
               ],
             ),
+<<<<<<< Updated upstream
           ),
         ],
       ),
@@ -250,6 +277,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
           colors: [
             AppColors.primaryBlue.withOpacity(0.12),
             const Color(0xFFF8F9FB),
+=======
+            const SizedBox(height: 16),
+            Text(
+              email,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkNavy,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                role.toUpperCase(),
+                style: const TextStyle(
+                  color: AppColors.primaryBlue,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 40),
+            const Divider(thickness: 1, height: 1),
+            _buildProfileOption(
+              icon: Icons.history,
+              title:
+                  (role.trim().toLowerCase() == 'driver' ||
+                      role.trim().toLowerCase() == 'rider')
+                  ? 'Ride History'
+                  : 'My Trips',
+              onTap: () {},
+            ),
+            _buildProfileOption(
+              icon: Icons.settings,
+              title: 'Settings',
+              onTap: () {},
+            ),
+            _buildProfileOption(
+              icon: Icons.help_outline,
+              title: 'Support',
+              onTap: () {},
+            ),
+            _buildProfileOption(
+              icon: Icons.logout,
+              title: 'Logout',
+              titleColor: Colors.redAccent,
+              iconColor: Colors.redAccent,
+              onTap: () => _handleLogout(context),
+            ),
+            const Divider(thickness: 1, height: 1),
+>>>>>>> Stashed changes
           ],
           stops: const [0.0, 0.4],
         ),

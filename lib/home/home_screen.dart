@@ -127,7 +127,9 @@ class _HomeScreenState extends State<HomeScreen>
                 const SizedBox(height: 10),
                 DashboardCards(
                   tripCount: 4,
-                  driverName: widget.role.toLowerCase() == 'driver'
+                  driverName:
+                      (widget.role.trim().toLowerCase() == 'driver' ||
+                          widget.role.trim().toLowerCase() == 'rider')
                       ? "You"
                       : "Lito Lapid",
                   plateNumber: "CLB 4930",
