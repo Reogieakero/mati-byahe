@@ -3,7 +3,18 @@ import '../../core/constant/app_colors.dart';
 import '../../qrscanner/qr_scanner_view.dart';
 
 class ActionGridWidget extends StatelessWidget {
-  const ActionGridWidget({super.key});
+  final VoidCallback? onReportTap;
+  final VoidCallback? onNewsTap;
+  final VoidCallback? onTrackTap;
+  final bool isDriver;
+
+  const ActionGridWidget({
+    super.key,
+    this.onReportTap,
+    this.onNewsTap,
+    this.onTrackTap,
+    this.isDriver = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -12,9 +23,13 @@ class ActionGridWidget extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildItem(Icons.campaign_rounded, "Report", () {}),
-          _buildItem(Icons.newspaper_rounded, "News", () {}),
-          _buildItem(Icons.analytics_rounded, "Track", () {}),
+          _buildItem(Icons.campaign_rounded, "Report", onReportTap ?? () {}),
+          _buildItem(Icons.newspaper_rounded, "News", onNewsTap ?? () {}),
+          _buildItem(
+            Icons.analytics_rounded,
+            isDriver ? "Trips" : "Track",
+            onTrackTap ?? () {},
+          ),
           _buildItem(Icons.qr_code_scanner_rounded, "Scan QR", () {
             _openQrScanner(context);
           }),

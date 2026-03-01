@@ -1,6 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../core/database/local_database.dart';
+import 'avatar_storage.dart';
 
 class EditProfileController {
   final _supabase = Supabase.instance.client;
@@ -18,6 +23,9 @@ class EditProfileController {
   bool canEdit = true;
   int daysRemaining = 0;
   bool isLoading = true;
+  String? avatarBase64;
+
+  final ImagePicker _imagePicker = ImagePicker();
 
   Future<void> init({
     required String name,
@@ -59,10 +67,24 @@ class EditProfileController {
         emailController = TextEditingController(text: email);
         phoneController = TextEditingController(text: phone);
       }
+
+      avatarBase64 = await AvatarStorage.getAvatarBase64(userId);
     }
 
     isLoading = false;
     onLoaded();
+  }
+
+  Future<void> pickAvatar() async {
+    final XFile? picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
+    avatarBase64 = base64Encode(bytes);
   }
 
   void _parseName(String name) {
@@ -124,6 +146,7 @@ class EditProfileController {
         name: fullNameString,
         phone: phoneController.text.trim(),
       );
+      await AvatarStorage.setAvatarBase64(userId, avatarBase64);
       return true;
     } catch (e) {
       return false;

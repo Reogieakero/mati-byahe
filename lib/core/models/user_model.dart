@@ -8,6 +8,10 @@ class UserModel {
     return UserModel(email: map['email'] ?? '', role: map['role'] ?? 'Unknown');
   }
 
-  bool get isDriver => role.toLowerCase() == 'driver';
+  bool get isDriver {
+    final normalizedRole = role.trim().toLowerCase();
+    return normalizedRole == 'driver';
+  }
+
   bool get isPassenger => role.toLowerCase() == 'passenger';
 }

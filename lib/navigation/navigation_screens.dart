@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
+
+import '../earnings/driver_earnings_screen.dart';
 import '../home/home_screen.dart';
 import '../history/history_screen.dart';
+import '../profile/driver_profile_screen.dart';
 import '../profile/profile_screen.dart';
 import '../report/report_history_screen.dart';
-import '../core/constant/app_texts.dart';
+import '../vehicle/driver_vehicle_screen.dart';
 
 class NavigationScreens {
   static List<Widget> getScreens(String email, String role) {
-    final String normalizedRole = role.toLowerCase();
+    final normalizedRole = role.trim().toLowerCase();
+    final bool isDriver = normalizedRole == 'driver';
 
-    if (normalizedRole == 'driver') {
+    if (isDriver) {
       return [
         HomeScreen(email: email, role: role),
-        _placeholder(AppTexts.navEarnings),
-        _placeholder(AppTexts.navVehicle),
-        ProfileScreen(email: email, role: role),
+        const DriverEarningsScreen(),
+        const DriverVehicleScreen(),
+        DriverProfileScreen(email: email),
       ];
     }
 
+    // ✅ PASSENGER NAV: keep original 5 items
     return [
       HomeScreen(email: email, role: role),
       HistoryScreen(email: email),
