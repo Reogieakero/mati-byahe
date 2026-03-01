@@ -46,7 +46,7 @@ class _MainNavigationState extends State<MainNavigation>
   @override
   Widget build(BuildContext context) {
     final normalizedRole = widget.role.trim().toLowerCase();
-    final isDriver = normalizedRole == 'driver' || normalizedRole == 'rider';
+    final isDriver = normalizedRole == 'driver';
     final screens = NavigationScreens.getScreens(widget.email, widget.role);
 
     return Scaffold(

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import '../../core/constant/app_colors.dart';
 
@@ -6,6 +8,7 @@ class ProfileHeader extends StatelessWidget {
   final String? name;
   final String role;
   final double scrollOffset;
+  final String? avatarBase64;
 
   const ProfileHeader({
     super.key,
@@ -13,6 +16,7 @@ class ProfileHeader extends StatelessWidget {
     this.name,
     required this.role,
     this.scrollOffset = 0.0,
+    this.avatarBase64,
   });
 
   @override
@@ -27,7 +31,7 @@ class ProfileHeader extends StatelessWidget {
         boxShadow: isScrolled
             ? [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -44,18 +48,24 @@ class ProfileHeader extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: AppColors.primaryBlue.withOpacity(0.2),
+                  color: AppColors.primaryBlue.withValues(alpha: 0.2),
                   width: isScrolled ? 1 : 2,
                 ),
               ),
               child: CircleAvatar(
                 radius: isScrolled ? 30 : 50,
                 backgroundColor: AppColors.primaryBlue,
-                child: Icon(
-                  Icons.person_rounded,
-                  size: isScrolled ? 35 : 55,
-                  color: Colors.white,
-                ),
+                backgroundImage:
+                    avatarBase64 != null && avatarBase64!.isNotEmpty
+                    ? MemoryImage(base64Decode(avatarBase64!))
+                    : null,
+                child: (avatarBase64 == null || avatarBase64!.isEmpty)
+                    ? Icon(
+                        Icons.person_rounded,
+                        size: isScrolled ? 35 : 55,
+                        color: Colors.white,
+                      )
+                    : null,
               ),
             ),
           ),
@@ -76,7 +86,7 @@ class ProfileHeader extends StatelessWidget {
                 email,
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.textGrey.withOpacity(0.8),
+                  color: AppColors.textGrey.withValues(alpha: 0.8),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -86,7 +96,7 @@ class ProfileHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.primaryBlue.withOpacity(0.1),
+                color: AppColors.primaryBlue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(100),
               ),
               child: Text(

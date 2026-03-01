@@ -1,66 +1,64 @@
 import 'package:flutter/material.dart';
 
+import '../core/constant/app_colors.dart';
+
 class DriverEarningsScreen extends StatelessWidget {
   const DriverEarningsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color(0xFFF3F3F3);
-
     return Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Center(
-                child: Text(
-                  'TRIP HISTORY',
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.bgYellowStart,
+              AppColors.bgYellowMid,
+              AppColors.bgYellowEnd,
+            ],
+            stops: [0.0, 0.55, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Trip History',
                   style: TextStyle(
-                    fontSize: 42,
+                    fontSize: 30,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
+                    color: AppColors.darkNavy,
                   ),
                 ),
-              ),
-              const SizedBox(height: 22),
-              const Text(
-                'Earnings',
-                style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: const [
-                  Expanded(
-                    child: _EarningCard(
-                      title: 'Today',
-                      amount: '₱150.00',
-                      bgColor: Color(0xFFCDE8CE),
-                      titleColor: Color(0xFF58A65B),
-                    ),
+                SizedBox(height: 4),
+                Text(
+                  'Earnings Overview',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textGrey,
+                    fontWeight: FontWeight.w500,
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: _EarningCard(
-                      title: 'Week',
-                      amount: '₱350.00',
-                      bgColor: Color(0xFFE8DFF0),
-                      titleColor: Color(0xFFD66BE0),
-                      borderColor: Color(0xFF2196F3),
-                    ),
+                ),
+                SizedBox(height: 14),
+                _EarningsSummary(),
+                SizedBox(height: 18),
+                Text(
+                  'Recent Trips',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkNavy,
                   ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'Recent Trips',
-                style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 10),
-              const Expanded(child: _TripList()),
-            ],
+                ),
+                SizedBox(height: 10),
+                Expanded(child: _TripList()),
+              ],
+            ),
           ),
         ),
       ),
@@ -68,30 +66,60 @@ class DriverEarningsScreen extends StatelessWidget {
   }
 }
 
-class _EarningCard extends StatelessWidget {
+class _EarningsSummary extends StatelessWidget {
+  const _EarningsSummary();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: const [
+        Expanded(
+          child: _SummaryCard(
+            title: 'Today',
+            amount: '₱150.00',
+            accent: AppColors.primaryBlue,
+          ),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: _SummaryCard(
+            title: 'Week',
+            amount: '₱350.00',
+            accent: AppColors.primaryYellow,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
   final String title;
   final String amount;
-  final Color bgColor;
-  final Color titleColor;
-  final Color borderColor;
+  final Color accent;
 
-  const _EarningCard({
+  const _SummaryCard({
     required this.title,
     required this.amount,
-    required this.bgColor,
-    required this.titleColor,
-    this.borderColor = Colors.transparent,
+    required this.accent,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 106,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      height: 102,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 3),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withValues(alpha: 0.35), width: 1.4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,9 +131,9 @@ class _EarningCard extends StatelessWidget {
             child: Text(
               title,
               style: TextStyle(
-                fontSize: 20,
-                color: titleColor,
-                fontWeight: FontWeight.w600,
+                color: accent,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -114,13 +142,31 @@ class _EarningCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               amount,
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                color: AppColors.darkNavy,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _TripItem {
+  final String id;
+  final String dateTime;
+  final String amount;
+  final double rating;
+
+  const _TripItem({
+    required this.id,
+    required this.dateTime,
+    required this.amount,
+    required this.rating,
+  });
 }
 
 class _TripList extends StatelessWidget {
@@ -132,50 +178,36 @@ class _TripList extends StatelessWidget {
       _TripItem(
         id: 'Trip #5024',
         dateTime: 'Jan 10, 2026 · 14:10',
-        rating: '★★★★★ 5.0',
         amount: '₱150.00',
+        rating: 5.0,
       ),
       _TripItem(
         id: 'Trip #5025',
         dateTime: 'Jan 11, 2026 · 14:11',
-        rating: '★★★★☆ 4.8',
         amount: '₱190.00',
+        rating: 4.8,
       ),
       _TripItem(
         id: 'Trip #5026',
         dateTime: 'Jan 12, 2026 · 14:12',
-        rating: '★★★★☆ 4.6',
         amount: '₱230.00',
+        rating: 4.6,
       ),
       _TripItem(
-        id: 'Trip #5026',
-        dateTime: 'Jan 12, 2026 · 14:12',
-        rating: '★★★★☆ 4.6',
-        amount: '₱230.00',
+        id: 'Trip #5027',
+        dateTime: 'Jan 13, 2026 · 09:35',
+        amount: '₱205.00',
+        rating: 4.9,
       ),
     ];
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
+      padding: const EdgeInsets.only(bottom: 10),
       itemBuilder: (context, index) => _TripTile(item: trips[index]),
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemCount: trips.length,
     );
   }
-}
-
-class _TripItem {
-  final String id;
-  final String dateTime;
-  final String rating;
-  final String amount;
-
-  const _TripItem({
-    required this.id,
-    required this.dateTime,
-    required this.rating,
-    required this.amount,
-  });
 }
 
 class _TripTile extends StatelessWidget {
@@ -185,31 +217,37 @@ class _TripTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ratingText = item.rating.toStringAsFixed(1);
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFD3D9E3), width: 2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primaryBlue.withValues(alpha: 0.12),
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF111827).withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFFF2F4F7),
+              color: AppColors.primaryBlue.withValues(alpha: 0.10),
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
             ),
-            child: const Icon(Icons.directions_car_rounded, size: 22),
+            child: const Icon(
+              Icons.directions_car_rounded,
+              size: 21,
+              color: AppColors.primaryBlue,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -219,56 +257,57 @@ class _TripTile extends StatelessWidget {
                 Text(
                   item.id,
                   style: const TextStyle(
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    fontSize: 16,
+                    color: AppColors.darkNavy,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   item.dateTime,
                   style: TextStyle(
-                    color: Colors.black.withValues(alpha: 0.52),
-                    fontSize: 13,
+                    fontSize: 12.5,
+                    color: AppColors.textGrey.withValues(alpha: 0.95),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 5),
-                RichText(
-                  text: TextSpan(
-                    text: item.rating.substring(0, 5),
-                    style: const TextStyle(
-                      color: Color(0xFFF4B400),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: item.rating.substring(5),
-                        style: const TextStyle(
-                          color: Color(0xFFE0A900),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Text(
+                      '★★★★★',
+                      style: TextStyle(
+                        color: AppColors.primaryYellow,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      ratingText,
+                      style: const TextStyle(
+                        color: Color(0xFFB08F1C),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFFE9F9F6),
+              color: AppColors.primaryBlue.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFC7EEE7), width: 1),
             ),
             child: Text(
               item.amount,
               style: const TextStyle(
-                color: Color(0xFF1E9F98),
-                fontSize: 16,
+                color: AppColors.primaryBlue,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
             ),

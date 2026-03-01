@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'core/database/sync_service.dart';
 import 'core/services/fare_service.dart';
 import 'core/services/auth_service.dart';
+import 'core/theme/theme_service.dart';
 import 'onboarding/onboarding_screen.dart';
 import 'login/login_screen.dart';
 import 'navigation/main_navigation.dart';
@@ -32,6 +31,7 @@ void main() async {
   );
 
   await FareService.init();
+  await ThemeService.init();
 
   final prefs = await SharedPreferences.getInstance();
   final bool onboardingCompleted =
@@ -55,14 +55,30 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Mati Byahe',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.black),
-        useMaterial3: true,
-      ),
-      home: _getInitialScreen(),
-      debugShowCheckedModeBanner: false,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeService.themeModeNotifier,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          title: 'Mati Byahe',
+          themeMode: themeMode,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF423ECC),
+            ),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF423ECC),
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          home: _getInitialScreen(),
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 

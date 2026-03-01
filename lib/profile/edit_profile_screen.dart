@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import '../core/constant/app_colors.dart';
 import '../components/confirmation_dialog.dart';
@@ -49,21 +51,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => ConfirmationDialog(
+      builder: (_) => ConfirmationDialog(
         title: "Lock Profile",
         content:
             "Saving these changes will lock your name for the next 14 days. Proceed?",
         confirmText: "Change",
         onConfirm: () async {
           final success = await _controller.saveProfile();
-          if (mounted) {
-            if (success) {
-              Navigator.pop(context, true);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Error saving profile.")),
-              );
-            }
+          if (!mounted) return;
+          if (success) {
+            Navigator.pop(context, true);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Error saving profile.")),
+            );
           }
         },
       ),
@@ -107,6 +108,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildAvatarEditor(),
+              const SizedBox(height: 24),
               if (!_controller.canEdit) _buildLockWarning(),
               const ProfileSectionLabel("NAME DETAILS"),
               ProfileTextField(
@@ -219,6 +222,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 color: Colors.brown,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarEditor() {
+    final avatar = _controller.avatarBase64;
+    return Center(
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 46,
+            backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.10),
+            backgroundImage: avatar != null && avatar.isNotEmpty
+                ? MemoryImage(base64Decode(avatar))
+                : null,
+            child: avatar == null || avatar.isEmpty
+                ? const Icon(
+                    Icons.person_rounded,
+                    size: 48,
+                    color: AppColors.primaryBlue,
+                  )
+                : null,
+          ),
+          const SizedBox(height: 10),
+          TextButton.icon(
+            onPressed: () async {
+              await _controller.pickAvatar();
+              if (mounted) setState(() {});
+            },
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: const Text("Change Photo"),
           ),
         ],
       ),

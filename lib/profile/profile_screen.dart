@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../components/confirmation_dialog.dart';
 import '../core/constant/app_colors.dart';
 import '../core/database/local_database.dart';
 import '../core/services/auth_service.dart';
+import '../core/theme/theme_service.dart';
 import '../login/login_screen.dart';
-import '../components/confirmation_dialog.dart';
-import 'widgets/profile_header.dart';
-import 'widgets/profile_menu_item.dart';
 import 'edit_profile_screen.dart';
 import 'guide_screen.dart';
 import 'legal_screen.dart';
 import 'set_pin_screen.dart';
+import 'avatar_storage.dart';
+import 'widgets/profile_header.dart';
+import 'widgets/profile_menu_item.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String email;
@@ -30,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String? _userName;
   String? _userPhone;
+  String? _avatarBase64;
   bool _isLoading = true;
   double _scrollOffset = 0.0;
 
@@ -49,13 +53,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _onScroll() {
     if (_scrollController.offset <= 50) {
-      setState(() {
-        _scrollOffset = _scrollController.offset;
-      });
+      setState(() => _scrollOffset = _scrollController.offset);
     } else if (_scrollOffset < 50) {
-      setState(() {
-        _scrollOffset = 50;
-      });
+      setState(() => _scrollOffset = 50);
     }
   }
 
@@ -71,6 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .maybeSingle();
 
       if (mounted) {
+        _avatarBase64 = await AvatarStorage.getAvatarBase64(user.id);
         setState(() {
           _userName = data?['full_name'];
           _userPhone = data?['phone_number'];
@@ -85,9 +86,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           phone: _userPhone ?? "",
         );
       }
-    } catch (e) {
+    } catch (_) {
       final localData = await _localDb.getUserById(user.id);
       if (mounted) {
+        _avatarBase64 = await AvatarStorage.getAvatarBase64(user.id);
         setState(() {
           _userName = localData?['full_name'];
           _userPhone = localData?['phone_number'];
@@ -100,19 +102,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _handleLogout() {
     showDialog(
       context: context,
-      builder: (context) => ConfirmationDialog(
+      builder: (dialogContext) => ConfirmationDialog(
         title: "Logout",
         content: "Are you sure you want to log out of your account?",
         confirmText: "Logout",
         onConfirm: () async {
           await _authService.signOut();
-          if (mounted) {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-              (route) => false,
-            );
-          }
+          if (!mounted) return;
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
         },
       ),
     );
@@ -130,7 +131,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-<<<<<<< Updated upstream
       backgroundColor: const Color(0xFFF8F9FB),
       body: Stack(
         children: [
@@ -150,6 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         email: widget.email,
                         name: _userName ?? "Set your name",
                         role: widget.role,
+                        avatarBase64: _avatarBase64,
                       ),
                       const SizedBox(height: 32),
                       _buildSectionLabel("ACCOUNT OVERVIEW"),
@@ -183,6 +184,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   MaterialPageRoute(
                                     builder: (context) => const SetPinScreen(),
                                   ),
+                                );
+                              },
+                            ),
+                            _buildDivider(),
+                            ValueListenableBuilder<ThemeMode>(
+                              valueListenable: ThemeService.themeModeNotifier,
+                              builder: (context, mode, _) {
+                                final isDark = mode == ThemeMode.dark;
+                                return SwitchListTile.adaptive(
+                                  value: isDark,
+                                  activeThumbColor: AppColors.primaryBlue,
+                                  activeTrackColor: AppColors.primaryBlue
+                                      .withValues(alpha: 0.35),
+                                  secondary: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryBlue.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      isDark
+                                          ? Icons.dark_mode_rounded
+                                          : Icons.light_mode_rounded,
+                                      size: 20,
+                                      color: AppColors.primaryBlue,
+                                    ),
+                                  ),
+                                  title: const Text(
+                                    'Dark Mode',
+                                    style: TextStyle(
+                                      color: AppColors.darkNavy,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  onChanged: (value) async {
+                                    await ThemeService.toggleDarkMode(value);
+                                  },
                                 );
                               },
                             ),
@@ -232,36 +273,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ]),
-=======
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('My Account'),
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.darkNavy,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 30),
-            const Center(
-              child: CircleAvatar(
-                radius: 55,
-                backgroundColor: AppColors.primaryBlue,
-                child: CircleAvatar(
-                  radius: 52,
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                    Icons.person,
-                    size: 60,
-                    color: AppColors.primaryBlue,
->>>>>>> Stashed changes
                   ),
                 ),
               ],
             ),
-<<<<<<< Updated upstream
           ),
         ],
       ),
@@ -275,64 +290,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppColors.primaryBlue.withOpacity(0.12),
+            AppColors.primaryBlue.withValues(alpha: 0.12),
             const Color(0xFFF8F9FB),
-=======
-            const SizedBox(height: 16),
-            Text(
-              email,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkNavy,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primaryBlue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                role.toUpperCase(),
-                style: const TextStyle(
-                  color: AppColors.primaryBlue,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-            const Divider(thickness: 1, height: 1),
-            _buildProfileOption(
-              icon: Icons.history,
-              title:
-                  (role.trim().toLowerCase() == 'driver' ||
-                      role.trim().toLowerCase() == 'rider')
-                  ? 'Ride History'
-                  : 'My Trips',
-              onTap: () {},
-            ),
-            _buildProfileOption(
-              icon: Icons.settings,
-              title: 'Settings',
-              onTap: () {},
-            ),
-            _buildProfileOption(
-              icon: Icons.help_outline,
-              title: 'Support',
-              onTap: () {},
-            ),
-            _buildProfileOption(
-              icon: Icons.logout,
-              title: 'Logout',
-              titleColor: Colors.redAccent,
-              iconColor: Colors.redAccent,
-              onTap: () => _handleLogout(context),
-            ),
-            const Divider(thickness: 1, height: 1),
->>>>>>> Stashed changes
           ],
           stops: const [0.0, 0.4],
         ),
@@ -341,18 +300,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   );
 
   Widget _buildSliverAppBar() {
-    bool isScrolled = _scrollOffset > 10;
+    final isScrolled = _scrollOffset > 10;
 
     return SliverAppBar(
       backgroundColor: isScrolled ? Colors.white : Colors.transparent,
       elevation: isScrolled ? 1 : 0,
       scrolledUnderElevation: 0,
-      shadowColor: Colors.black.withOpacity(0.2),
+      shadowColor: Colors.black.withValues(alpha: 0.2),
       surfaceTintColor: Colors.white,
       pinned: true,
       centerTitle: true,
       automaticallyImplyLeading: false,
-      title: Text(
+      title: const Text(
         "PROFILE",
         style: TextStyle(
           fontSize: 16,
@@ -371,7 +330,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       style: TextStyle(
         fontSize: 10,
         fontWeight: FontWeight.w800,
-        color: AppColors.textGrey.withOpacity(0.7),
+        color: AppColors.textGrey.withValues(alpha: 0.7),
         letterSpacing: 1.5,
       ),
     ),
@@ -382,7 +341,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.black.withOpacity(0.05)),
+      border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
       boxShadow: const [
         BoxShadow(
           color: Color(0x05000000),
@@ -396,7 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildDivider() => Divider(
     height: 1,
-    color: Colors.grey.withOpacity(0.08),
+    color: Colors.grey.withValues(alpha: 0.08),
     indent: 56,
     endIndent: 16,
   );

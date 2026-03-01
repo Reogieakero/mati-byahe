@@ -10,7 +10,7 @@ class UserModel {
 
   bool get isDriver {
     final normalizedRole = role.trim().toLowerCase();
-    return normalizedRole == 'driver' || normalizedRole == 'rider';
+    return normalizedRole == 'driver';
   }
 
   bool get isPassenger => role.toLowerCase() == 'passenger';

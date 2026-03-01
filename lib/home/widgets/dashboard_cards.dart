@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import '../../core/constant/app_colors.dart';
 
@@ -6,7 +8,9 @@ class DashboardCards extends StatelessWidget {
   final String driverName;
   final String plateNumber;
   final String email;
+  final String displayName;
   final String role;
+  final String? avatarBase64;
 
   const DashboardCards({
     super.key,
@@ -14,7 +18,9 @@ class DashboardCards extends StatelessWidget {
     required this.driverName,
     required this.plateNumber,
     required this.email,
+    required this.displayName,
     required this.role,
+    this.avatarBase64,
   });
 
   @override
@@ -51,10 +57,19 @@ class DashboardCards extends StatelessWidget {
                         width: 1,
                       ),
                     ),
-                    child: const Icon(
-                      Icons.person_rounded,
-                      color: Colors.white,
-                      size: 28,
+                    child: ClipOval(
+                      child: avatarBase64 != null && avatarBase64!.isNotEmpty
+                          ? Image.memory(
+                              base64Decode(avatarBase64!),
+                              fit: BoxFit.cover,
+                              width: 50,
+                              height: 50,
+                            )
+                          : const Icon(
+                              Icons.person_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                     ),
                   ),
                   const SizedBox(width: 15),
@@ -63,7 +78,9 @@ class DashboardCards extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          email.split('@')[0].toUpperCase(),
+                          displayName.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
