@@ -19,12 +19,16 @@ class UserService {
 
       if (data != null) {
         final db = await _localDb.database;
+
+        final String role =
+            data['role'] ?? user.userMetadata?['role'] ?? 'Passenger';
+
         await db.insert('users', {
           'id': user.id,
           'email': user.email,
           'full_name': data['full_name'],
           'phone_number': data['phone_number'],
-          'role': data['role'] ?? 'passenger',
+          'role': role,
           'login_pin': data['login_pin'],
           'is_synced': 1,
         }, conflictAlgorithm: ConflictAlgorithm.replace);

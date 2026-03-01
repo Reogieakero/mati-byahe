@@ -27,9 +27,6 @@ class SignupRepository {
       );
 
       if (res.user != null) {
-        // The manual upsert to 'profiles' is removed here.
-        // The SQL Trigger you created handles this automatically.
-
         await db.insert('users', {
           'id': res.user!.id,
           'email': email,

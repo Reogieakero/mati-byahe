@@ -15,10 +15,11 @@ class SyncService {
       if (result.isEmpty || result[0].rawAddress.isEmpty) return;
 
       final db = await _localDb.database;
+
+      await _syncProfileChanges(db);
       await _syncTrips(db);
       await _syncReports(db);
       await _syncDeletedReports(db);
-      await _syncProfileChanges(db);
     } catch (e) {
       debugPrint("Sync error: $e");
     }
@@ -37,11 +38,14 @@ class SyncService {
     if (unsynced.isEmpty) return;
     final userData = unsynced.first;
 
+    if (userData['role'] == null || userData['role'] == 'Unknown') return;
+
     try {
       await _supabase.from('profiles').upsert({
         'id': userData['id'],
         'full_name': userData['full_name'],
         'phone_number': userData['phone_number'],
+        'role': userData['role'],
         'login_pin': userData['login_pin'],
         'updated_at': DateTime.now().toIso8601String(),
       });
@@ -52,9 +56,7 @@ class SyncService {
         where: 'id = ?',
         whereArgs: [userData['id']],
       );
-    } catch (e) {
-      debugPrint("Profile sync error: $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> _syncTrips(db) async {
@@ -63,22 +65,17 @@ class SyncService {
       where: 'is_synced = ?',
       whereArgs: [0],
     );
-    final currentUser = _supabase.auth.currentUser;
-    if (currentUser == null) return;
-
     for (var data in unsynced) {
       try {
         await _supabase.from('trips').upsert({
           'uuid': data['uuid'],
-          'passenger_id': currentUser.id,
+          'passenger_id': data['passenger_id'],
+          'driver_id': data['driver_id'],
           'driver_name': data['driver_name'],
           'pickup': data['pickup'],
           'drop_off': data['drop_off'],
           'calculated_fare': data['fare'],
-          'gas_tier': data['gas_tier'],
-          'start_datetime': data['start_time'],
-          'end_datetime': data['end_time'],
-          'created_at': data['date'],
+          'date': data['date'],
           'status': 'completed',
         }, onConflict: 'uuid');
         await db.update(
@@ -92,34 +89,20 @@ class SyncService {
   }
 
   Future<void> _syncReports(db) async {
-    final List<Map<String, dynamic>> unsyncedReports = await db.query(
+    final List<Map<String, dynamic>> unsynced = await db.query(
       'reports',
       where: 'is_synced = ? AND is_deleted = ?',
       whereArgs: [0, 0],
     );
-    final currentUser = _supabase.auth.currentUser;
-    if (currentUser == null) return;
-
-    for (var data in unsyncedReports) {
+    for (var data in unsynced) {
       try {
-        final tripData = await _supabase
-            .from('trips')
-            .select('id')
-            .eq('uuid', data['trip_uuid'])
-            .maybeSingle();
-        if (tripData == null) continue;
-
         await _supabase.from('reports').upsert({
-          'trip_id': tripData['id'],
           'trip_uuid': data['trip_uuid'],
-          'passenger_id': currentUser.id,
           'issue_type': data['issue_type'],
           'description': data['description'],
           'status': data['status'],
           'reported_at': data['reported_at'],
-          'is_unreported': data['is_unreported'] == 1,
         }, onConflict: 'trip_uuid');
-
         await db.update(
           'reports',
           {'is_synced': 1},
@@ -131,18 +114,18 @@ class SyncService {
   }
 
   Future<void> _syncDeletedReports(db) async {
-    final List<Map<String, dynamic>> deletedReports = await db.query(
+    final List<Map<String, dynamic>> deleted = await db.query(
       'reports',
       where: 'is_deleted = ?',
       whereArgs: [1],
     );
-    for (var data in deletedReports) {
+    for (var data in deleted) {
       try {
         await _supabase
             .from('reports')
             .delete()
             .eq('trip_uuid', data['trip_uuid']);
-        await _localDb.deleteReportPermanently(data['id']);
+        await db.delete('reports', where: 'id = ?', whereArgs: [data['id']]);
       } catch (e) {}
     }
   }

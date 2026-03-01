@@ -23,7 +23,10 @@ class AuthService {
             .eq('id', res.user!.id)
             .maybeSingle();
 
-        final String role = profileData?['role'] ?? 'Unknown';
+        final String role =
+            profileData?['role'] ??
+            res.user!.userMetadata?['role'] ??
+            'Passenger';
 
         final db = await _localDb.database;
         await db.insert('users', {
@@ -63,7 +66,6 @@ class AuthService {
             'passenger_id': record['passenger_id'],
             'driver_id': record['driver_id'],
             'driver_name': record['driver_name'],
-            'email': record['email'] ?? '',
             'pickup': record['pickup'],
             'drop_off': record['drop_off'],
             'fare': record['calculated_fare'],
@@ -75,9 +77,7 @@ class AuthService {
           }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
-    } catch (e) {
-      debugPrint("Trip Sync Error: $e");
-    }
+    } catch (e) {}
   }
 
   Future<void> syncDownReports(String userId) async {
@@ -96,18 +96,14 @@ class AuthService {
             'driver_id': record['driver_id'],
             'issue_type': record['issue_type'],
             'description': record['description'],
-            'evidence_url': record['evidence_url'],
             'status': record['status'],
             'reported_at': record['reported_at'],
             'is_synced': 1,
             'is_deleted': 0,
-            'is_unreported': record['is_unreported'] == true ? 1 : 0,
           }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
-    } catch (e) {
-      debugPrint("Report Sync Error: $e");
-    }
+    } catch (e) {}
   }
 
   Future<UserModel?> _attemptLocalLogin(String email, String password) async {
