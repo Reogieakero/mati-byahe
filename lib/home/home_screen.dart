@@ -6,6 +6,8 @@ import 'widgets/verification_overlay.dart';
 import 'widgets/location_selector.dart';
 import 'widgets/action_grid_widget.dart';
 import 'widgets/active_trip_widget.dart';
+import 'widgets/driver_welcome_card.dart';
+import 'widgets/driver_passenger_widget.dart';
 import 'home_controller.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -125,6 +127,14 @@ class _HomeScreenState extends State<HomeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 10),
+                if (widget.role.toLowerCase() == 'driver')
+                  DriverWelcomeCard(
+                    driverName: widget.email.split('@')[0].capitalize(),
+                    tripCount: 4,
+                    rating: 4.9,
+                    earnings: 0.0,
+                  ),
+                const SizedBox(height: 10),
                 DashboardCards(
                   tripCount: 4,
                   driverName: widget.role.toLowerCase() == 'driver'
@@ -140,7 +150,9 @@ class _HomeScreenState extends State<HomeScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 15),
                   child: _activeTripData != null
                       ? _buildActiveTrip()
-                      : _buildLocationSelector(),
+                      : (widget.role.toLowerCase() == 'driver'
+                            ? DriverPassengerWidget(email: widget.email)
+                            : _buildLocationSelector()),
                 ),
                 const SizedBox(height: 30),
               ],
@@ -191,5 +203,12 @@ class _HomeScreenState extends State<HomeScreen>
         });
       },
     );
+  }
+}
+
+extension _StringCasingExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return this[0].toUpperCase() + substring(1);
   }
 }
