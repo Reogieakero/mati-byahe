@@ -5,17 +5,18 @@ import 'fare_display.dart';
 import 'empty_route_placeholder.dart';
 import '../../core/services/fare_service.dart';
 import '../../core/services/location_data_service.dart';
-import '../../core/database/local_database.dart';
 import '../../core/constant/app_colors.dart';
 import '../home_controller.dart';
 
 class LocationSelector extends StatefulWidget {
   final String email;
+  final String role;
   final Function(double) onFareCalculated;
 
   const LocationSelector({
     super.key,
     required this.email,
+    required this.role,
     required this.onFareCalculated,
   });
 
@@ -181,24 +182,28 @@ class _LocationSelectorState extends State<LocationSelector> {
   }
 
   Widget _buildFareOrPlaceholder(double? fare) {
+    final bool isDriver = widget.role.toLowerCase() == 'driver';
+
     if (fare != null && fare > 0) {
       return FareDisplay(
         fare: fare,
-        buttonLabel: 'Ride',
-        onArrived: () async {
-          await _controller.startTrip(
-            context: context,
-            email: widget.email,
-            fare: fare,
-            pickup: _pickup!,
-            dropOff: _drop!,
-            gasTier: _selectedGasTier,
-            onSuccess: (val) {
-              widget.onFareCalculated(val);
-              _resetTrip();
-            },
-          );
-        },
+        buttonLabel: isDriver ? 'Clear' : 'Ride',
+        onArrived: isDriver
+            ? _resetTrip
+            : () async {
+                await _controller.startTrip(
+                  context: context,
+                  email: widget.email,
+                  fare: fare,
+                  pickup: _pickup!,
+                  dropOff: _drop!,
+                  gasTier: _selectedGasTier,
+                  onSuccess: (val) {
+                    widget.onFareCalculated(val);
+                    _resetTrip();
+                  },
+                );
+              },
       );
     }
     return const EmptyRoutePlaceholder();

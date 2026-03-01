@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../home/home_screen.dart';
 import '../history/history_screen.dart';
+import '../qrscanner/qr_scanner_view.dart';
 import '../profile/profile_screen.dart';
 import '../report/report_history_screen.dart';
 import '../core/constant/app_texts.dart';
@@ -21,7 +22,7 @@ class NavigationScreens {
     return [
       HomeScreen(email: email, role: role),
       HistoryScreen(email: email),
-      _placeholder("SCANNER"),
+      QrScannerView(onQrCodeDetected: (code) {}),
       const ReportHistoryScreen(),
       ProfileScreen(email: email, role: role),
     ];

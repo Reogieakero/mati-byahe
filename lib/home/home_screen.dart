@@ -184,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildLocationSelector() {
     return LocationSelector(
       email: widget.email,
+      role: widget.role,
       onFareCalculated: (fare) async {
         final updatedData = await _controller.loadSavedFare(widget.email);
         setState(() {
