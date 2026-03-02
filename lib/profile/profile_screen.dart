@@ -66,7 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final data = await _supabase
           .from('profiles')
-          .select('full_name, phone_number')
+          .select()
           .eq('id', user.id)
           .maybeSingle();
 
@@ -149,6 +149,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         email: widget.email,
                         name: _userName ?? "Set your name",
                         role: widget.role,
+                        scrollOffset: _scrollOffset,
                       ),
                       const SizedBox(height: 32),
                       _buildSectionLabel("ACCOUNT OVERVIEW"),
@@ -166,6 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       initialName: _userName ?? "",
                                       initialEmail: widget.email,
                                       initialPhone: _userPhone ?? "",
+                                      role: widget.role,
                                     ),
                                   ),
                                 );
@@ -272,7 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       title: Text(
         "PROFILE",
         style: TextStyle(
-          fontSize: 16,
+          fontSize: 12,
           fontWeight: FontWeight.w900,
           letterSpacing: 2.0,
           color: AppColors.darkNavy,

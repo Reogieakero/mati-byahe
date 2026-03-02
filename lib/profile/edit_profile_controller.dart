@@ -12,11 +12,14 @@ class EditProfileController {
   late final TextEditingController emailController;
   late final TextEditingController phoneController;
 
+  late final TextEditingController plateNumberController;
+  late final TextEditingController vehicleColorController;
+  late final TextEditingController addressController;
+  late final TextEditingController licenseNumberController;
+  late final TextEditingController vehicleTypeController;
+
   final List<String> suffixes = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V'];
   String selectedSuffix = '';
-
-  bool canEdit = true;
-  int daysRemaining = 0;
   bool isLoading = true;
 
   Future<void> init({
@@ -42,22 +45,30 @@ class EditProfileController {
         phoneController = TextEditingController(
           text: userData['phone_number'] ?? phone,
         );
-
-        if (userData['last_name_change'] != null) {
-          DateTime lastUpdate = DateTime.parse(
-            userData['last_name_change'],
-          ).toUtc();
-          DateTime now = DateTime.now().toUtc();
-          final difference = now.difference(lastUpdate).inDays;
-          if (difference < 14) {
-            canEdit = false;
-            daysRemaining = 14 - difference;
-          }
-        }
+        plateNumberController = TextEditingController(
+          text: userData['plate_number'] ?? "",
+        );
+        vehicleColorController = TextEditingController(
+          text: userData['vehicle_color'] ?? "",
+        );
+        addressController = TextEditingController(
+          text: userData['address'] ?? "",
+        );
+        licenseNumberController = TextEditingController(
+          text: userData['license_number'] ?? "",
+        );
+        vehicleTypeController = TextEditingController(
+          text: userData['vehicle_type'] ?? "",
+        );
       } catch (e) {
         _parseName(name);
         emailController = TextEditingController(text: email);
         phoneController = TextEditingController(text: phone);
+        plateNumberController = TextEditingController();
+        vehicleColorController = TextEditingController();
+        addressController = TextEditingController();
+        licenseNumberController = TextEditingController();
+        vehicleTypeController = TextEditingController();
       }
     }
 
@@ -114,7 +125,11 @@ class EditProfileController {
           .update({
             'full_name': fullNameString,
             'phone_number': phoneController.text.trim(),
-            'last_name_change': nowIso,
+            'plate_number': plateNumberController.text.trim(),
+            'vehicle_color': vehicleColorController.text.trim(),
+            'address': addressController.text.trim(),
+            'license_number': licenseNumberController.text.trim(),
+            'vehicle_type': vehicleTypeController.text.trim(),
             'updated_at': nowIso,
           })
           .eq('id', userId);
@@ -136,5 +151,10 @@ class EditProfileController {
     lastNameController.dispose();
     emailController.dispose();
     phoneController.dispose();
+    plateNumberController.dispose();
+    vehicleColorController.dispose();
+    addressController.dispose();
+    licenseNumberController.dispose();
+    vehicleTypeController.dispose();
   }
 }

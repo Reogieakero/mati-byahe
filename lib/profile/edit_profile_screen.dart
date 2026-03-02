@@ -9,12 +9,14 @@ class EditProfileScreen extends StatefulWidget {
   final String initialName;
   final String initialEmail;
   final String initialPhone;
+  final String role;
 
   const EditProfileScreen({
     super.key,
     required this.initialName,
     required this.initialEmail,
     required this.initialPhone,
+    required this.role,
   });
 
   @override
@@ -50,10 +52,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => ConfirmationDialog(
-        title: "Lock Profile",
-        content:
-            "Saving these changes will lock your name for the next 14 days. Proceed?",
-        confirmText: "Change",
+        title: "Update Profile",
+        content: "Are you sure you want to save these changes?",
+        confirmText: "Save",
         onConfirm: () async {
           final success = await _controller.saveProfile();
           if (mounted) {
@@ -75,6 +76,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (_controller.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
+    final bool isDriver = widget.role.toLowerCase() == 'driver';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
@@ -107,13 +110,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!_controller.canEdit) _buildLockWarning(),
               const ProfileSectionLabel("NAME DETAILS"),
               ProfileTextField(
                 label: "First Name",
                 controller: _controller.firstNameController,
                 icon: Icons.person_outline_rounded,
-                enabled: _controller.canEdit,
                 validator: (v) => v!.isEmpty ? "Required" : null,
               ),
               const SizedBox(height: 16),
@@ -121,7 +122,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 label: "Middle Name",
                 controller: _controller.middleNameController,
                 icon: Icons.person_pin_outlined,
-                enabled: _controller.canEdit,
               ),
               const SizedBox(height: 16),
               Row(
@@ -133,7 +133,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       label: "Last Name",
                       controller: _controller.lastNameController,
                       icon: Icons.badge_outlined,
-                      enabled: _controller.canEdit,
                       validator: (v) => v!.isEmpty ? "Required" : null,
                     ),
                   ),
@@ -143,11 +142,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: SuffixDropdown(
                       value: _controller.selectedSuffix,
                       items: _controller.suffixes,
-                      onChanged: _controller.canEdit
-                          ? (val) => setState(
-                              () => _controller.selectedSuffix = val!,
-                            )
-                          : null,
+                      onChanged: (val) =>
+                          setState(() => _controller.selectedSuffix = val!),
                     ),
                   ),
                 ],
@@ -166,19 +162,63 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 controller: _controller.phoneController,
                 icon: Icons.phone_android_rounded,
                 keyboardType: TextInputType.phone,
-                enabled: true,
                 validator: (v) => v!.length < 10 ? "Invalid phone" : null,
               ),
+              if (isDriver) ...[
+                const SizedBox(height: 32),
+                const ProfileSectionLabel("DRIVER & VEHICLE DETAILS"),
+                ProfileTextField(
+                  label: "License Number",
+                  controller: _controller.licenseNumberController,
+                  icon: Icons.contact_emergency_outlined,
+                  validator: (v) => v!.isEmpty ? "Required" : null,
+                ),
+                const SizedBox(height: 16),
+                ProfileTextField(
+                  label: "Home Address",
+                  controller: _controller.addressController,
+                  icon: Icons.home_outlined,
+                  validator: (v) => v!.isEmpty ? "Required" : null,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ProfileTextField(
+                        label: "Plate Number",
+                        controller: _controller.plateNumberController,
+                        icon: Icons.numbers_rounded,
+                        validator: (v) => v!.isEmpty ? "Required" : null,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ProfileTextField(
+                        label: "Vehicle Type",
+                        controller: _controller.vehicleTypeController,
+                        icon: Icons.directions_car_filled_outlined,
+                        validator: (v) => v!.isEmpty ? "Required" : null,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ProfileTextField(
+                  label: "Vehicle Color",
+                  controller: _controller.vehicleColorController,
+                  icon: Icons.color_lens_outlined,
+                  validator: (v) => v!.isEmpty ? "Required" : null,
+                ),
+              ],
               const SizedBox(height: 40),
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _controller.canEdit ? _handleSave : null,
+                  onPressed: _handleSave,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryBlue,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey.shade300,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -193,34 +233,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildLockWarning() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade200),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.lock_clock_rounded, color: Colors.amber, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              "Profile changes are locked for 14 days. Available in ${_controller.daysRemaining} days.",
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.brown,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
