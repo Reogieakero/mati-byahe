@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/constant/app_colors.dart';
+import '../../other screens/news_screen.dart';
+import '../../other screens/report_screen.dart';
+import '../../other screens/tracking_screen.dart';
 import '../../qrscanner/qr_scanner_view.dart';
 
 class ActionGridWidget extends StatelessWidget {
@@ -12,9 +15,24 @@ class ActionGridWidget extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildItem(Icons.campaign_rounded, "Report", () {}),
-          _buildItem(Icons.newspaper_rounded, "News", () {}),
-          _buildItem(Icons.analytics_rounded, "Track", () {}),
+          _buildItem(Icons.campaign_rounded, "Report", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReportScreen()),
+            );
+          }),
+          _buildItem(Icons.newspaper_rounded, "News", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NewsScreen()),
+            );
+          }),
+          _buildItem(Icons.analytics_rounded, "Track", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TrackingScreen()),
+            );
+          }),
           _buildItem(Icons.qr_code_scanner_rounded, "Scan QR", () {
             _openQrScanner(context);
           }),
@@ -48,7 +66,7 @@ class ActionGridWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.08),
+              color: AppColors.primaryBlue.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: AppColors.primaryBlue, size: 24),
