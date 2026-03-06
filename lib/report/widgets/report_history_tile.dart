@@ -16,108 +16,91 @@ class ReportHistoryTile extends StatelessWidget {
     this.onViewDetails,
   });
 
-  String _formatDate(String? dateStr) {
-    if (dateStr == null) return "";
-    try {
-      final DateTime date = DateTime.parse(dateStr).toLocal();
-      return DateFormat('MMM dd • hh:mm a').format(date);
-    } catch (e) {
-      return "";
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final DateTime date =
+        DateTime.tryParse(report['reported_at'] ?? '') ?? DateTime.now();
+
+    // These now come from the JOIN query
+    final String pickup = report['pickup'] ?? "Unknown Location";
+    final String dropOff = report['drop_off'] ?? "Unknown Destination";
+    final String issueType = (report['issue_type']?.toString() ?? "REPORT")
+        .toUpperCase();
+
     return InkWell(
       onTap: onViewDetails,
       onLongPress: () => menuKey.currentState?.showButtonMenu(),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
         decoration: const BoxDecoration(
           color: Colors.transparent,
           border: Border(
-            bottom: BorderSide(color: AppColors.softWhite, width: 0.8),
+            bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1.0),
           ),
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.report_problem_rounded,
-                color: Colors.redAccent,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Same Date formatting as Trip Tile
                   Text(
-                    (report['issue_type']?.toString() ?? "REPORT")
-                        .toUpperCase(),
+                    DateFormat('MMM dd, yyyy • hh:mm a').format(date),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textGrey.withOpacity(0.7),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Same Location formatting as Trip Tile
+                  Text(
+                    "$pickup → $dropOff",
                     style: const TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.darkNavy,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
+                  // Metadata subtext (Issue Type)
                   Text(
-                    report['description'] ?? "No details provided.",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.darkNavy.withOpacity(0.6),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatDate(report['reported_at']),
+                    issueType,
                     style: TextStyle(
                       fontSize: 10,
-                      color: AppColors.textGrey.withOpacity(0.6),
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.redAccent.withOpacity(0.8),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 10),
+            // Right-side Status Icon and Menu
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 20),
-                Theme(
-                  data: Theme.of(context).copyWith(
-                    useMaterial3: true,
-                    hoverColor: Colors.transparent,
-                    splashColor: Colors.transparent,
-                  ),
+                const Icon(
+                  Icons.report_problem_rounded,
+                  size: 18,
+                  color: Colors.redAccent,
+                ),
+                const SizedBox(height: 2),
+                SizedBox(
+                  height: 24,
+                  width: 24,
                   child: PopupMenuButton<String>(
                     key: menuKey,
                     padding: EdgeInsets.zero,
-                    elevation: 4,
-                    shadowColor: Colors.black26,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    color: Colors.white,
-                    surfaceTintColor: Colors.white,
                     icon: const Icon(
                       Icons.more_horiz,
+                      size: 18,
                       color: AppColors.textGrey,
-                      size: 20,
                     ),
                     onSelected: (value) {
                       if (value == 'view') onViewDetails?.call();
@@ -155,7 +138,7 @@ class ReportHistoryTile extends StatelessWidget {
   }) {
     return PopupMenuItem(
       value: value,
-      height: 38,
+      height: 40,
       child: Row(
         children: [
           Icon(icon, size: 16, color: color),

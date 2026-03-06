@@ -29,11 +29,20 @@ extension ReportDatabase on LocalDatabase {
     String passengerId,
   ) async {
     final db = await database;
-    return await db.query(
-      'reports',
-      where: 'passenger_id = ? AND is_deleted = 0 AND is_unreported = 0',
-      whereArgs: [passengerId],
-      orderBy: 'id DESC',
+    return await db.rawQuery(
+      '''
+    SELECT 
+      reports.*, 
+      trips.pickup, 
+      trips.drop_off 
+    FROM reports
+    INNER JOIN trips ON reports.trip_uuid = trips.uuid
+    WHERE reports.passenger_id = ? 
+      AND reports.is_deleted = 0 
+      AND reports.is_unreported = 0
+    ORDER BY reports.id DESC
+  ''',
+      [passengerId],
     );
   }
 

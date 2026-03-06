@@ -22,7 +22,10 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
   final SyncService _syncService = SyncService();
   final ReportService _reportService = ReportService();
 
-  Future<List<Map<String, dynamic>>>? _historyFuture;
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _allReports = [];
+  List<Map<String, dynamic>> _filteredReports = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -40,7 +43,16 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
   void _refreshData() {
     if (!mounted) return;
     setState(() {
-      _historyFuture = _loadHistory();
+      _isLoading = true;
+    });
+    _loadHistory().then((list) {
+      if (mounted) {
+        setState(() {
+          _allReports = list;
+          _filteredReports = List.from(list);
+          _isLoading = false;
+        });
+      }
     });
   }
 
@@ -62,97 +74,134 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.redAccent.withOpacity(0.15),
-              Colors.white,
-              Colors.redAccent.withOpacity(0.05),
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ),
-        ),
+        color: Colors.white,
         child: Column(
           children: [
             const ReportHistoryAppBar(),
+            _buildSearchBar(),
             Expanded(
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _historyFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting &&
-                      !snapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: Colors.redAccent),
-                    );
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return RefreshIndicator(
-                      onRefresh: _triggerSync,
-                      color: Colors.redAccent,
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.7,
-                            child: const ReportHistoryEmptyState(),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return RefreshIndicator(
-                    onRefresh: _triggerSync,
-                    color: Colors.redAccent,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 100, top: 8),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: snapshot.data!.length,
-                      itemBuilder: (context, index) {
-                        final report = snapshot.data![index];
-                        return ReportHistoryTile(
-                          report: report,
-                          onViewDetails: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ReportDetailsScreen(report: report),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.black),
+                    )
+                  : (_filteredReports.isEmpty
+                        ? RefreshIndicator(
+                            onRefresh: _triggerSync,
+                            color: Colors.black,
+                            child: ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: [
+                                SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.7,
+                                  child: const ReportHistoryEmptyState(),
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _triggerSync,
+                            color: Colors.black,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.only(
+                                bottom: 100,
+                                top: 8,
                               ),
-                            );
-                          },
-                          onDelete: () {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (dialogContext) => ConfirmationDialog(
-                                title: "Unreport Trip",
-                                content:
-                                    "Are you sure you want to unreport this trip? This will remove it from your visible history.",
-                                confirmText: "Unreport",
-                                onConfirm: () async {
-                                  await _localDb.markAsUnreported(report['id']);
-                                  if (mounted) {
-                                    _refreshData();
-                                    _syncService.syncOnStart();
-                                  }
-                                },
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              itemCount: _filteredReports.length,
+                              itemBuilder: (context, index) {
+                                final report = _filteredReports[index];
+                                return ReportHistoryTile(
+                                  report: report,
+                                  onViewDetails: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ReportDetailsScreen(report: report),
+                                      ),
+                                    );
+                                  },
+                                  onDelete: () {
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (dialogContext) =>
+                                          ConfirmationDialog(
+                                            title: "Unreport Trip",
+                                            content:
+                                                "Are you sure you want to unreport this trip? This will remove it from your visible history.",
+                                            confirmText: "Unreport",
+                                            onConfirm: () async {
+                                              await _localDb.markAsUnreported(
+                                                report['id'],
+                                              );
+                                              if (mounted) {
+                                                _refreshData();
+                                                _syncService.syncOnStart();
+                                              }
+                                            },
+                                          ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          )),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
+        border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (q) => _filterReports(q),
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          hintText: "Search location...",
+          hintStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
+          prefixIcon: const Padding(
+            padding: EdgeInsets.only(left: 15, right: 10),
+            child: Icon(Icons.search, size: 20, color: Colors.black54),
+          ),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 20),
+                  onPressed: () {
+                    _searchController.clear();
+                    _filterReports("");
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: const Color(0xFFF5F5F5),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _filterReports(String query) {
+    setState(() {
+      _filteredReports = _allReports.where((r) {
+        final pickup = (r['pickup'] ?? "").toString().toLowerCase();
+        final dropOff = (r['drop_off'] ?? "").toString().toLowerCase();
+        final searchLower = query.toLowerCase();
+        return pickup.contains(searchLower) || dropOff.contains(searchLower);
+      }).toList();
+    });
   }
 }
