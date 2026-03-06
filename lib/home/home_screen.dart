@@ -54,25 +54,22 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context);
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        backgroundColor: Color(0xFFFAFAFA),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: AppColors.darkNavy,
+            strokeWidth: 2,
+          ),
+        ),
+      );
     }
 
     return Scaffold(
-      body: Container(
+      backgroundColor: const Color(0xFFFAFAFA),
+      body: SizedBox(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primaryYellow.withOpacity(0.2),
-              Colors.white,
-              AppColors.primaryYellow.withOpacity(0.1),
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ),
-        ),
         child: !_isVerified ? _buildRestrictedView() : _buildHomeContent(),
       ),
     );
@@ -85,17 +82,26 @@ class _HomeScreenState extends State<HomeScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.lock_person_rounded,
-              size: 80,
-              color: AppColors.primaryYellow,
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.black.withOpacity(0.08)),
+              ),
+              child: const Icon(
+                Icons.lock_person_rounded,
+                size: 60,
+                color: AppColors.darkNavy,
+              ),
             ),
             const SizedBox(height: 24),
             const Text(
               "Access Restricted",
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
                 color: AppColors.darkNavy,
               ),
             ),
@@ -121,6 +127,7 @@ class _HomeScreenState extends State<HomeScreen>
         const HomeHeader(),
         Expanded(
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

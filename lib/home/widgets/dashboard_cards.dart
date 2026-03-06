@@ -19,7 +19,6 @@ class DashboardCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Check if the current user is a driver
     final bool isDriver = role.toLowerCase() == 'driver';
 
     return Padding(
@@ -27,97 +26,128 @@ class DashboardCards extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: AppColors.darkNavy,
-          borderRadius: BorderRadius.circular(8),
+          // Navy Blue is dominant, White acts as a "line/sheen" gradient
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            stops: const [0.0, 0.3, 1.0],
+            colors: [
+              AppColors.darkNavy,
+              AppColors.darkNavy.withBlue(
+                100,
+              ), // Slight lighter navy transition
+              AppColors.darkNavy,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
           boxShadow: [
             BoxShadow(
-              color: AppColors.darkNavy.withOpacity(0.2),
+              color: AppColors.darkNavy.withOpacity(0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
           ],
         ),
-        child: Column(
+        child: Stack(
           children: [
-            // Header Section (Common for both)
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.person_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
+            // This adds the "White Line Gradient" effect across the top
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Colors.white.withOpacity(0.2),
+                      Colors.transparent,
+                    ],
                   ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          email.split('@')[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        Text(
-                          role.toUpperCase(),
-                          style: TextStyle(
-                            color: AppColors.primaryYellow.withOpacity(0.9),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDriver
-                          ? Colors.greenAccent.withOpacity(0.2)
-                          : const Color.fromARGB(255, 223, 223, 223),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      isDriver ? 'ONLINE' : 'ONGOING',
-                      style: TextStyle(
-                        color: isDriver
-                            ? Colors.greenAccent
-                            : AppColors.darkNavy,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 9,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-            Divider(color: Colors.white.withOpacity(0.05), height: 1),
-
-            // Stats Section: Conditional logic for Driver vs Passenger
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: isDriver ? _buildDriverStats() : _buildPassengerStats(),
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              email.split('@')[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Text(
+                              role.toUpperCase(),
+                              style: TextStyle(
+                                color: AppColors.primaryYellow.withOpacity(0.9),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDriver
+                              ? Colors.greenAccent.withOpacity(0.2)
+                              : Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          isDriver ? 'ONLINE' : 'ONGOING',
+                          style: TextStyle(
+                            color: isDriver ? Colors.greenAccent : Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(color: Colors.white.withOpacity(0.05), height: 1),
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: isDriver
+                      ? _buildDriverStats()
+                      : _buildPassengerStats(),
+                ),
+              ],
             ),
           ],
         ),
@@ -125,7 +155,6 @@ class DashboardCards extends StatelessWidget {
     );
   }
 
-  // New Driver Stats: Passengers and Ratings
   Widget _buildDriverStats() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -143,7 +172,6 @@ class DashboardCards extends StatelessWidget {
     );
   }
 
-  // Original Passenger Layout (Unchanged Content)
   Widget _buildPassengerStats() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -181,6 +209,7 @@ class DashboardCards extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withOpacity(0.03)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,7 +233,7 @@ class DashboardCards extends StatelessWidget {
                 Text(
                   plateNumber,
                   style: TextStyle(
-                    color: AppColors.primaryYellow.withOpacity(0.8),
+                    color: AppColors.primaryYellow.withOpacity(0.9),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.0,
@@ -218,7 +247,6 @@ class DashboardCards extends StatelessWidget {
     );
   }
 
-  // Helper for Driver stats
   Widget _buildStatColumn(
     String label,
     String value,
