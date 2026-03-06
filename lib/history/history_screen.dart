@@ -20,6 +20,11 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   final TripService _tripService = TripService();
   final _supabase = Supabase.instance.client;
+  final TextEditingController _searchController = TextEditingController();
+
+  List<Map<String, dynamic>> _allTrips = [];
+  List<Map<String, dynamic>> _filteredTrips = [];
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -29,7 +34,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _triggerSync() async {
     await _tripService.syncTrips();
-    if (mounted) setState(() {});
+    _loadTrips();
+  }
+
+  Future<void> _loadTrips() async {
+    final String? userId = _supabase.auth.currentUser?.id;
+    if (userId != null) {
+      final trips = await LocalDatabase().getTripsByPassengerId(userId);
+      if (mounted) {
+        setState(() {
+          _allTrips = trips;
+          _filteredTrips = trips;
+        });
+      }
+    }
+  }
+
+  void _filterTrips(String query) {
+    setState(() {
+      _filteredTrips = _allTrips.where((trip) {
+        final pickup = (trip['pickup'] ?? "").toString().toLowerCase();
+        final dropOff = (trip['drop_off'] ?? "").toString().toLowerCase();
+        final searchLower = query.toLowerCase();
+        return pickup.contains(searchLower) || dropOff.contains(searchLower);
+      }).toList();
+    });
   }
 
   @override
@@ -37,58 +66,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final String? userId = _supabase.auth.currentUser?.id;
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primaryYellow.withOpacity(0.2),
-              Colors.white,
-              AppColors.primaryYellow.withOpacity(0.1),
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ),
-        ),
-        child: Column(
-          children: [
-            const HistoryHeader(),
-            Expanded(
-              child: userId == null
-                  ? _buildScrollableEmptyState()
-                  : FutureBuilder<List<Map<String, dynamic>>>(
-                      future: LocalDatabase().getTripsByPassengerId(userId),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                                ConnectionState.waiting &&
-                            !snapshot.hasData) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-
-                        if (snapshot.hasError) {
-                          return const Center(
-                            child: Text("Error loading history"),
-                          );
-                        }
-
-                        final trips = snapshot.data ?? [];
-
-                        if (trips.isEmpty) {
-                          return _buildScrollableEmptyState();
-                        }
-
-                        return RefreshIndicator(
-                          onRefresh: _triggerSync,
-                          child: ListView.builder(
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          const HistoryHeader(),
+          _buildSearchBar(),
+          Expanded(
+            child: userId == null
+                ? _buildScrollableEmptyState()
+                : _allTrips.isEmpty
+                ? _buildScrollableEmptyState()
+                : RefreshIndicator(
+                    color: AppColors.darkNavy,
+                    onRefresh: _triggerSync,
+                    child: _filteredTrips.isEmpty
+                        ? _buildNoResultsFound()
+                        : ListView.builder(
                             padding: const EdgeInsets.only(bottom: 100),
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            itemCount: trips.length,
+                            physics: const BouncingScrollPhysics(
+                              parent: AlwaysScrollableScrollPhysics(),
+                            ),
+                            itemCount: _filteredTrips.length,
                             itemBuilder: (context, index) {
-                              final trip = trips[index];
+                              final trip = _filteredTrips[index];
                               return HistoryTile(
                                 trip: trip,
                                 onViewDetails: () {
@@ -100,44 +100,106 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     ),
                                   );
                                 },
-                                onDelete: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => ConfirmationDialog(
-                                      title: "Delete Trip",
-                                      content:
-                                          "Are you sure you want to delete this trip record? This cannot be undone.",
-                                      confirmText: "Delete",
-                                      onConfirm: () async {
-                                        await _tripService.deleteTrip(
-                                          trip['uuid'],
-                                        );
-                                        if (mounted) setState(() {});
-                                      },
-                                    ),
-                                  );
-                                },
+                                onDelete: () => _handleDelete(trip),
                               );
                             },
                           ),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
+        border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: _filterTrips,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          hintText: "Search location...",
+          hintStyle: TextStyle(color: AppColors.textGrey.withOpacity(0.5)),
+          prefixIcon: const Padding(
+            padding: EdgeInsets.only(left: 15, right: 10),
+            child: Icon(Icons.search, size: 20, color: AppColors.darkNavy),
+          ),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 20),
+                  onPressed: () {
+                    _searchController.clear();
+                    _filterTrips("");
+                  },
+                )
+              : null,
+          filled: false,
+          fillColor: const Color(0xFFF5F5F5),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildNoResultsFound() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off_rounded,
+            size: 60,
+            color: AppColors.textGrey.withOpacity(0.3),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "No matching trips found",
+            style: TextStyle(
+              color: AppColors.textGrey.withOpacity(0.6),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleDelete(Map<String, dynamic> trip) {
+    showDialog(
+      context: context,
+      builder: (context) => ConfirmationDialog(
+        title: "Delete Trip",
+        content: "Are you sure you want to delete this trip record?",
+        confirmText: "Delete",
+        onConfirm: () async {
+          await _tripService.deleteTrip(trip['uuid']);
+          _loadTrips();
+        },
       ),
     );
   }
 
   Widget _buildScrollableEmptyState() {
     return RefreshIndicator(
+      color: AppColors.darkNavy,
       onRefresh: _triggerSync,
       child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         children: [
           SizedBox(
-            height: MediaQuery.of(context).size.height * 0.7,
+            height: MediaQuery.of(context).size.height * 0.65,
             child: const HistoryEmptyState(),
           ),
         ],

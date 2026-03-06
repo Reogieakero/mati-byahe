@@ -136,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen>
                   tripCount: 0,
                   driverName: widget.role.toLowerCase() == 'driver'
                       ? "You"
-                      : "Searching...",
+                      : "Plan your ride...",
                   plateNumber: "--- ---",
                   email: widget.email,
                   role: widget.role,

@@ -31,14 +31,14 @@ class HistoryTile extends StatelessWidget {
       onTap: onViewDetails,
       onLongPress: () => menuKey.currentState?.showButtonMenu(),
       child: Stack(
-        alignment: Alignment.center, // Helps align children in the stack
+        alignment: Alignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
             decoration: const BoxDecoration(
               color: Colors.transparent,
               border: Border(
-                bottom: BorderSide(color: AppColors.softWhite, width: 0.8),
+                bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1.0),
               ),
             ),
             child: Row(
@@ -49,10 +49,11 @@ class HistoryTile extends StatelessWidget {
                     children: [
                       Text(
                         DateFormat('MMM dd, yyyy • hh:mm a').format(date),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
-                          color: AppColors.textGrey,
-                          fontWeight: FontWeight.bold,
+                          color: AppColors.textGrey.withOpacity(0.7),
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -81,66 +82,69 @@ class HistoryTile extends StatelessWidget {
                         color: AppColors.darkNavy,
                       ),
                     ),
-                    PopupMenuButton<String>(
-                      key: menuKey,
-                      icon: const Icon(
-                        Icons.more_vert,
-                        size: 18,
-                        color: AppColors.textGrey,
+                    const SizedBox(height: 2),
+                    SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: PopupMenuButton<String>(
+                        key: menuKey,
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(
+                          Icons.more_horiz,
+                          size: 18,
+                          color: AppColors.textGrey,
+                        ),
+                        onSelected: (value) {
+                          if (value == 'view') onViewDetails?.call();
+                          if (value == 'delete') onDelete?.call();
+                        },
+                        itemBuilder: (context) => [
+                          _buildMenuItem(
+                            value: 'view',
+                            icon: Icons.visibility_outlined,
+                            label: 'VIEW DETAILS',
+                            color: AppColors.darkNavy,
+                          ),
+                          _buildMenuItem(
+                            value: 'delete',
+                            icon: Icons.delete_outline_rounded,
+                            label: 'DELETE',
+                            color: Colors.redAccent,
+                          ),
+                        ],
                       ),
-                      onSelected: (value) {
-                        if (value == 'view') onViewDetails?.call();
-                        if (value == 'delete') onDelete?.call();
-                      },
-                      itemBuilder: (context) => [
-                        _buildMenuItem(
-                          value: 'view',
-                          icon: Icons.visibility_outlined,
-                          label: 'VIEW DETAILS',
-                          color: AppColors.darkNavy,
-                        ),
-                        _buildMenuItem(
-                          value: 'delete',
-                          icon: Icons.delete_outline_rounded,
-                          label: 'DELETE',
-                          color: Colors.redAccent,
-                        ),
-                      ],
                     ),
                   ],
                 ),
               ],
             ),
           ),
-
-          // Centered Watermark
           FutureBuilder<bool>(
             future: LocalDatabase().isTripReported(trip['uuid']),
             builder: (context, snapshot) {
               if (snapshot.data == true) {
                 return IgnorePointer(
-                  // Makes sure the watermark doesn't block clicks
                   child: Transform.rotate(
-                    angle: -0.15, // Slight tilt for watermark look
+                    angle: -0.10,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
+                        horizontal: 8,
+                        vertical: 2,
                       ),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: Colors.redAccent.withOpacity(0.3),
-                          width: 2.0,
+                          color: Colors.redAccent.withOpacity(0.15),
+                          width: 1.5,
                         ),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         "REPORTED",
                         style: TextStyle(
-                          color: Colors.redAccent.withOpacity(0.3),
-                          fontSize: 14, // Slightly larger for center visibility
+                          color: Colors.redAccent.withOpacity(0.15),
+                          fontSize: 11,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 2,
+                          letterSpacing: 1.5,
                         ),
                       ),
                     ),
@@ -163,7 +167,7 @@ class HistoryTile extends StatelessWidget {
   }) {
     return PopupMenuItem(
       value: value,
-      height: 38,
+      height: 40,
       child: Row(
         children: [
           Icon(icon, size: 16, color: color),
