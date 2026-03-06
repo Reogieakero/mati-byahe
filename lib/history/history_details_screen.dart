@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/constant/app_colors.dart';
-import 'widgets/details/route_card.dart';
-import 'widgets/details/detail_row.dart';
+import 'widgets/details/trip_info_card.dart';
+import 'widgets/details/payment_info_card.dart';
 import 'widgets/details/report_button.dart';
 
 class HistoryDetailsScreen extends StatelessWidget {
@@ -16,95 +16,23 @@ class HistoryDetailsScreen extends StatelessWidget {
         DateTime.tryParse(trip['date'] ?? '') ?? DateTime.now();
 
     return Scaffold(
-      extendBody: true,
       backgroundColor: Colors.white,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primaryYellow.withOpacity(0.2),
-              Colors.white,
-              AppColors.primaryYellow.withOpacity(0.1),
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ),
-        ),
+      appBar: _buildAppBar(context),
+      body: Padding(
+        padding: const EdgeInsets.all(15),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildAppBar(context),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionHeader("ROUTE INFORMATION"),
-                    const SizedBox(height: 16),
-                    RouteCard(
-                      pickup: trip['pickup'] ?? "Unknown",
-                      dropOff:
-                          (trip['drop_off']?.toString().isNotEmpty ?? false)
-                          ? trip['drop_off']
-                          : "---",
-                    ),
-                    const SizedBox(height: 32),
-                    _buildSectionHeader("PAYMENT & FARE"),
-                    const SizedBox(height: 12),
-                    DetailRow(
-                      label: "Total Fare",
-                      value: "₱${trip['fare']}",
-                      isBold: true,
-                    ),
-                    DetailRow(
-                      label: "Gas Tier",
-                      value:
-                          trip['gas_tier']?.toString().toUpperCase() ?? "N/A",
-                    ),
-                    const Divider(height: 32, color: AppColors.softWhite),
-                    _buildSectionHeader("TIME LOGS"),
-                    const SizedBox(height: 12),
-                    DetailRow(
-                      label: "Date",
-                      value: DateFormat('MMMM dd, yyyy').format(date),
-                    ),
-                    DetailRow(
-                      label: "Pickup Time",
-                      value: trip['start_time'] ?? "--:--",
-                    ),
-                    DetailRow(
-                      label: "Drop-off Time",
-                      value: trip['end_time'] ?? "--:--",
-                    ),
-                    const SizedBox(height: 32),
-                    _buildSectionHeader("PARTICIPANTS"),
-                    const SizedBox(height: 12),
-                    DetailRow(
-                      label: "Driver Name",
-                      value:
-                          trip['driver_name']?.toString().toUpperCase() ??
-                          "N/A",
-                      isBold: true,
-                    ),
-                    DetailRow(
-                      label: "Plate Number",
-                      value: trip['driver_plate'] ?? trip['driver_id'] ?? "N/A",
-                    ),
-                    DetailRow(
-                      label: "Passenger ID",
-                      value: trip['passenger_id'] ?? "N/A",
-                    ),
-                    const SizedBox(height: 100),
-                  ],
-                ),
-              ),
-            ),
+            _buildStatusHeader(date),
+            const SizedBox(height: 24),
+            const _SectionLabel(label: "Trip Logistics"),
+            const SizedBox(height: 8),
+            TripInfoCard(trip: trip),
+            const SizedBox(height: 24),
+            const _SectionLabel(label: "Payment & Personnel"),
+            const SizedBox(height: 8),
+            PaymentInfoCard(trip: trip),
+            const Spacer(),
           ],
         ),
       ),
@@ -112,39 +40,68 @@ class HistoryDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: const Text(
-        "TRIP DETAILS",
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.2,
-          color: AppColors.darkNavy,
+  Widget _buildStatusHeader(DateTime date) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Trip Summary",
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: AppColors.darkNavy,
+          ),
         ),
-      ),
-      centerTitle: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          size: 18,
-          color: AppColors.darkNavy,
+        const SizedBox(height: 4),
+        Text(
+          "Completed on ${DateFormat('MMMM dd, yyyy').format(date)}",
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
         ),
-        onPressed: () => Navigator.pop(context),
-      ),
+      ],
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: true,
+      leading: IconButton(
+        icon: const Icon(Icons.close, color: AppColors.darkNavy, size: 20),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Text(
+          "TRIP-ID-8291",
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
     return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w900,
-        color: Colors.grey,
-        letterSpacing: 0.8,
+      label.toUpperCase(),
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.5,
+        color: Colors.grey.shade500,
       ),
     );
   }

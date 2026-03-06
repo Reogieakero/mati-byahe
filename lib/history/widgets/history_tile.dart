@@ -125,7 +125,7 @@ class HistoryTile extends StatelessWidget {
               if (snapshot.data == true) {
                 return IgnorePointer(
                   child: Transform.rotate(
-                    angle: -0.10,
+                    angle: -0.15,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -133,7 +133,7 @@ class HistoryTile extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: Colors.redAccent.withOpacity(0.15),
+                          color: Colors.redAccent.withOpacity(0.6),
                           width: 1.5,
                         ),
                         borderRadius: BorderRadius.circular(4),
@@ -141,7 +141,7 @@ class HistoryTile extends StatelessWidget {
                       child: Text(
                         "REPORTED",
                         style: TextStyle(
-                          color: Colors.redAccent.withOpacity(0.15),
+                          color: Colors.redAccent.withOpacity(0.5),
                           fontSize: 11,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.5,
