@@ -106,121 +106,124 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              ProfileHeader(
-                email: widget.email,
-                name: _userName ?? "Set your name",
-                role: widget.role,
-              ),
-              const SizedBox(height: 30),
-
-              _buildSectionLabel("ACCOUNT SETTINGS"),
-              _buildShadcnCard(
-                child: Column(
-                  children: [
-                    ProfileMenuItem(
-                      icon: Icons.person_outline_rounded,
-                      title: 'Edit Profile',
-                      onTap: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EditProfileScreen(
-                              initialName: _userName ?? "",
-                              initialEmail: widget.email,
-                              initialPhone: _userPhone ?? "",
-                              role: widget.role,
-                            ),
-                          ),
-                        );
-                        if (result == true) _fetchUserData();
-                      },
-                    ),
-                    if (widget.role.toLowerCase() == 'driver') ...[
-                      _buildDivider(),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ProfileHeader(
+                  email: widget.email,
+                  name: _userName ?? "Set your name",
+                  role: widget.role,
+                ),
+                const SizedBox(height: 25),
+                _buildSectionLabel("ACCOUNT SETTINGS"),
+                _buildShadcnCard(
+                  child: Column(
+                    children: [
                       ProfileMenuItem(
-                        icon: Icons.qr_code_2_rounded,
-                        title: 'My QR Code ID',
+                        icon: Icons.person_outline_rounded,
+                        title: 'Edit Profile',
                         onTap: () async {
-                          final userId = _supabase.auth.currentUser?.id;
-                          if (userId != null) {
-                            final data = await _localDb.getUserById(userId);
-                            if (data != null && mounted) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      QRCodeScreen(driverData: data),
-                                ),
-                              );
-                            }
-                          }
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditProfileScreen(
+                                initialName: _userName ?? "",
+                                initialEmail: widget.email,
+                                initialPhone: _userPhone ?? "",
+                                role: widget.role,
+                              ),
+                            ),
+                          );
+                          if (result == true) _fetchUserData();
                         },
                       ),
+                      if (widget.role.toLowerCase() == 'driver') ...[
+                        _buildDivider(),
+                        ProfileMenuItem(
+                          icon: Icons.qr_code_2_rounded,
+                          title: 'My QR Code ID',
+                          onTap: () async {
+                            final userId = _supabase.auth.currentUser?.id;
+                            if (userId != null) {
+                              final data = await _localDb.getUserById(userId);
+                              if (data != null && mounted) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        QRCodeScreen(driverData: data),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                      _buildDivider(),
+                      ProfileMenuItem(
+                        icon: Icons.lock_outline_rounded,
+                        title: 'Security PIN',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SetPinScreen(),
+                          ),
+                        ),
+                      ),
                     ],
-                    _buildDivider(),
-                    ProfileMenuItem(
-                      icon: Icons.lock_outline_rounded,
-                      title: 'Security PIN',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SetPinScreen(),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-
-              const SizedBox(height: 40),
-
-              Center(
-                child: Wrap(
-                  spacing: 40,
-                  runSpacing: 20,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _buildGcashAction(
-                      icon: Icons.auto_stories_rounded,
-                      label: "App Guide",
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => GuideScreen(role: widget.role),
+                const SizedBox(height: 35),
+                Center(
+                  child: Wrap(
+                    spacing: 30,
+                    runSpacing: 20,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      _buildActionItem(
+                        icon: Icons.auto_stories_rounded,
+                        label: "App Guide",
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                GuideScreen(role: widget.role),
+                          ),
                         ),
                       ),
-                    ),
-                    _buildGcashAction(
-                      icon: Icons.gavel_rounded,
-                      label: "Legal",
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LegalScreen(),
+                      _buildActionItem(
+                        icon: Icons.gavel_rounded,
+                        label: "Legal",
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LegalScreen(),
+                          ),
                         ),
                       ),
-                    ),
-                    _buildGcashAction(
-                      icon: Icons.logout_rounded,
-                      label: "Logout",
-                      color: Colors.redAccent,
-                      onTap: _handleLogout,
-                    ),
-                  ],
+                      _buildActionItem(
+                        icon: Icons.logout_rounded,
+                        label: "Logout",
+                        color: Colors.redAccent,
+                        onTap: _handleLogout,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 25),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildGcashAction({
+  Widget _buildActionItem({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
@@ -260,22 +263,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSectionLabel(String title) => Padding(
-    padding: const EdgeInsets.only(left: 4, bottom: 10),
+    padding: const EdgeInsets.only(left: 4, bottom: 8),
     child: Text(
       title,
       style: TextStyle(
         fontSize: 10,
         fontWeight: FontWeight.w800,
         color: AppColors.textGrey.withOpacity(0.5),
-        letterSpacing: 1.5,
+        letterSpacing: 1.2,
       ),
     ),
   );
 
   Widget _buildShadcnCard({required Widget child}) => Container(
+    width: double.infinity,
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       border: Border.all(color: AppColors.softWhite, width: 1),
     ),
     child: child,
