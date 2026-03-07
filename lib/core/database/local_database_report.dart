@@ -31,17 +31,21 @@ extension ReportDatabase on LocalDatabase {
     final db = await database;
     return await db.rawQuery(
       '''
-    SELECT 
-      reports.*, 
-      trips.pickup, 
-      trips.drop_off 
-    FROM reports
-    INNER JOIN trips ON reports.trip_uuid = trips.uuid
-    WHERE reports.passenger_id = ? 
-      AND reports.is_deleted = 0 
-      AND reports.is_unreported = 0
-    ORDER BY reports.id DESC
-  ''',
+      SELECT 
+        r.*, 
+        t.pickup, 
+        t.drop_off, 
+        t.driver_name,
+        t.driver_plate,
+        t.start_time,
+        t.end_time
+      FROM reports r
+      INNER JOIN trips t ON r.trip_uuid = t.uuid
+      WHERE r.passenger_id = ? 
+        AND r.is_deleted = 0 
+        AND r.is_unreported = 0
+      ORDER BY r.id DESC
+    ''',
       [passengerId],
     );
   }
