@@ -27,37 +27,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final LocalDatabase _localDb = LocalDatabase();
   final AuthService _authService = AuthService();
   final _supabase = Supabase.instance.client;
-  final ScrollController _scrollController = ScrollController();
 
   String? _userName;
   String? _userPhone;
   bool _isLoading = true;
-  double _scrollOffset = 0.0;
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
-    _scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scrollController.offset <= 50) {
-      setState(() {
-        _scrollOffset = _scrollController.offset;
-      });
-    } else if (_scrollOffset < 50) {
-      setState(() {
-        _scrollOffset = 50;
-      });
-    }
   }
 
   Future<void> _fetchUserData() async {
@@ -70,26 +48,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .select()
           .eq('id', user.id)
           .maybeSingle();
-
       if (mounted) {
         setState(() {
           _userName = data?['full_name'];
           _userPhone = data?['phone_number'];
           _isLoading = false;
         });
-      }
-
-      if (data != null) {
-        await _localDb.updateUserProfile(
-          id: user.id,
-          name: _userName ?? "",
-          phone: _userPhone ?? "",
-          plate: data['plate_number'],
-          color: data['vehicle_color'],
-          address: data['address'],
-          license: data['license_number'],
-          vehicleType: data['vehicle_type'],
-        );
       }
     } catch (e) {
       final localData = await _localDb.getUserById(user.id);
@@ -108,7 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => ConfirmationDialog(
         title: "Logout",
-        content: "Are you sure you want to log out of your account?",
+        content: "Are you sure you want to log out?",
         confirmText: "Logout",
         onConfirm: () async {
           await _authService.signOut();
@@ -128,224 +92,195 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFFF8F9FB),
+        backgroundColor: Colors.white,
         body: Center(
-          child: CircularProgressIndicator(color: AppColors.primaryBlue),
+          child: CircularProgressIndicator(
+            color: AppColors.primaryBlue,
+            strokeWidth: 2,
+          ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
-      body: Stack(
-        children: [
-          _buildGradientBackground(),
-          SafeArea(
-            child: CustomScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                _buildSliverAppBar(),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(15, 0, 15, 30),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      const SizedBox(height: 20),
-                      ProfileHeader(
-                        email: widget.email,
-                        name: _userName ?? "Set your name",
-                        role: widget.role,
-                        scrollOffset: _scrollOffset,
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              ProfileHeader(
+                email: widget.email,
+                name: _userName ?? "Set your name",
+                role: widget.role,
+              ),
+              const SizedBox(height: 30),
+
+              _buildSectionLabel("ACCOUNT SETTINGS"),
+              _buildShadcnCard(
+                child: Column(
+                  children: [
+                    ProfileMenuItem(
+                      icon: Icons.person_outline_rounded,
+                      title: 'Edit Profile',
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditProfileScreen(
+                              initialName: _userName ?? "",
+                              initialEmail: widget.email,
+                              initialPhone: _userPhone ?? "",
+                              role: widget.role,
+                            ),
+                          ),
+                        );
+                        if (result == true) _fetchUserData();
+                      },
+                    ),
+                    if (widget.role.toLowerCase() == 'driver') ...[
+                      _buildDivider(),
+                      ProfileMenuItem(
+                        icon: Icons.qr_code_2_rounded,
+                        title: 'My QR Code ID',
+                        onTap: () async {
+                          final userId = _supabase.auth.currentUser?.id;
+                          if (userId != null) {
+                            final data = await _localDb.getUserById(userId);
+                            if (data != null && mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      QRCodeScreen(driverData: data),
+                                ),
+                              );
+                            }
+                          }
+                        },
                       ),
-                      const SizedBox(height: 32),
-                      _buildSectionLabel("ACCOUNT OVERVIEW"),
-                      _buildContentCard(
-                        child: Column(
-                          children: [
-                            ProfileMenuItem(
-                              icon: Icons.person_outline_rounded,
-                              title: 'Edit Profile',
-                              onTap: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => EditProfileScreen(
-                                      initialName: _userName ?? "",
-                                      initialEmail: widget.email,
-                                      initialPhone: _userPhone ?? "",
-                                      role: widget.role,
-                                    ),
-                                  ),
-                                );
-                                if (result == true) _fetchUserData();
-                              },
-                            ),
-                            if (widget.role.toLowerCase() == 'driver') ...[
-                              _buildDivider(),
-                              ProfileMenuItem(
-                                icon: Icons.qr_code_2_rounded,
-                                title: 'My QR Code ID',
-                                onTap: () async {
-                                  final userId = _supabase.auth.currentUser?.id;
-                                  if (userId != null) {
-                                    final data = await _localDb.getUserById(
-                                      userId,
-                                    );
-                                    if (data != null && mounted) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              QRCodeScreen(driverData: data),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                              ),
-                            ],
-                            _buildDivider(),
-                            ProfileMenuItem(
-                              icon: Icons.lock_outline_rounded,
-                              title: 'Login PIN',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const SetPinScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
+                    ],
+                    _buildDivider(),
+                    ProfileMenuItem(
+                      icon: Icons.lock_outline_rounded,
+                      title: 'Security PIN',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SetPinScreen(),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      _buildSectionLabel("SUPPORT & LEGAL"),
-                      _buildContentCard(
-                        child: Column(
-                          children: [
-                            ProfileMenuItem(
-                              icon: Icons.auto_stories_rounded,
-                              title: 'App Guide',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        GuideScreen(role: widget.role),
-                                  ),
-                                );
-                              },
-                            ),
-                            _buildDivider(),
-                            ProfileMenuItem(
-                              icon: Icons.gavel_rounded,
-                              title: 'Legal & Privacy',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const LegalScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                            _buildDivider(),
-                            ProfileMenuItem(
-                              icon: Icons.logout_rounded,
-                              title: 'Logout',
-                              titleColor: Colors.redAccent,
-                              iconColor: Colors.redAccent,
-                              onTap: _handleLogout,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ]),
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+
+              const SizedBox(height: 40),
+
+              Center(
+                child: Wrap(
+                  spacing: 40,
+                  runSpacing: 20,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    _buildGcashAction(
+                      icon: Icons.auto_stories_rounded,
+                      label: "App Guide",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => GuideScreen(role: widget.role),
+                        ),
+                      ),
+                    ),
+                    _buildGcashAction(
+                      icon: Icons.gavel_rounded,
+                      label: "Legal",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LegalScreen(),
+                        ),
+                      ),
+                    ),
+                    _buildGcashAction(
+                      icon: Icons.logout_rounded,
+                      label: "Logout",
+                      color: Colors.redAccent,
+                      onTap: _handleLogout,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildGradientBackground() => Positioned.fill(
-    child: Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.primaryBlue.withOpacity(0.12),
-            const Color(0xFFF8F9FB),
+  Widget _buildGcashAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color color = AppColors.primaryBlue,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 70,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.darkNavy.withOpacity(0.8),
+              ),
+            ),
           ],
-          stops: const [0.0, 0.4],
-        ),
-      ),
-    ),
-  );
-
-  Widget _buildSliverAppBar() {
-    bool isScrolled = _scrollOffset > 10;
-    return SliverAppBar(
-      backgroundColor: isScrolled ? Colors.white : Colors.transparent,
-      elevation: isScrolled ? 1 : 0,
-      scrolledUnderElevation: 0,
-      shadowColor: Colors.black.withOpacity(0.2),
-      surfaceTintColor: Colors.white,
-      pinned: true,
-      centerTitle: true,
-      automaticallyImplyLeading: false,
-      title: Text(
-        "PROFILE",
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 2.0,
-          color: AppColors.darkNavy,
         ),
       ),
     );
   }
 
   Widget _buildSectionLabel(String title) => Padding(
-    padding: const EdgeInsets.only(left: 4, bottom: 12),
+    padding: const EdgeInsets.only(left: 4, bottom: 10),
     child: Text(
       title,
       style: TextStyle(
         fontSize: 10,
         fontWeight: FontWeight.w800,
-        color: AppColors.textGrey.withOpacity(0.7),
+        color: AppColors.textGrey.withOpacity(0.5),
         letterSpacing: 1.5,
       ),
     ),
   );
 
-  Widget _buildContentCard({required Widget child}) => Container(
-    width: double.infinity,
+  Widget _buildShadcnCard({required Widget child}) => Container(
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.black.withOpacity(0.05)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x05000000),
-          blurRadius: 10,
-          offset: Offset(0, 4),
-        ),
-      ],
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: AppColors.softWhite, width: 1),
     ),
     child: child,
   );
 
-  Widget _buildDivider() => Divider(
-    height: 1,
-    color: Colors.grey.withOpacity(0.08),
-    indent: 56,
-    endIndent: 16,
-  );
+  Widget _buildDivider() =>
+      Divider(height: 1, color: AppColors.softWhite, indent: 50, endIndent: 16);
 }
