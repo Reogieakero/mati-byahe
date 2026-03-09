@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../database/local_database.dart';
+import 'package:sqflite/sqflite.dart';
+import 'local_database.dart';
 
 class SyncService {
   final LocalDatabase _localDb = LocalDatabase();
@@ -16,12 +17,65 @@ class SyncService {
 
       final db = await _localDb.database;
 
+      await pullUserData(); // Fetch data from Cloud to Local first
       await _syncProfileChanges(db);
       await _syncTrips(db);
       await _syncReports(db);
       await _syncDeletedReports(db);
     } catch (e) {
       debugPrint("Sync error: $e");
+    }
+  }
+
+  Future<void> pullUserData() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+    final db = await _localDb.database;
+
+    try {
+      final profile = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (profile != null) {
+        await db.insert('users', {
+          'id': profile['id'],
+          'full_name': profile['full_name'],
+          'phone_number': profile['phone_number'],
+          'role': profile['role'],
+          'email': user.email,
+          'is_verified': 1,
+          'is_synced': 1,
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+
+      final trips = await _supabase
+          .from('trips')
+          .select()
+          .or('passenger_id.eq.${user.id},driver_id.eq.${user.id}');
+
+      if (trips != null) {
+        for (var trip in trips) {
+          await db.insert('trips', {
+            'uuid': trip['uuid'],
+            'passenger_id': trip['passenger_id'],
+            'driver_id': trip['driver_id'],
+            'driver_name': trip['driver_name'],
+            'driver_plate': trip['driver_plate'],
+            'pickup': trip['pickup'],
+            'drop_off': trip['drop_off'],
+            'fare': trip['calculated_fare'],
+            'gas_tier': trip['gas_tier'],
+            'start_time': trip['start_datetime'],
+            'end_time': trip['end_datetime'],
+            'is_synced': 1,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+    } catch (e) {
+      debugPrint("Pull error: $e");
     }
   }
 
@@ -37,7 +91,6 @@ class SyncService {
 
     if (unsynced.isEmpty) return;
     final userData = unsynced.first;
-
     if (userData['role'] == null || userData['role'] == 'Unknown') return;
 
     try {

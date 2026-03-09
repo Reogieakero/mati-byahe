@@ -75,8 +75,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         content: "Are you sure you want to log out?",
         confirmText: "Logout",
         onConfirm: () async {
-          Navigator.pop(dialogContext);
-
           await _authService.signOut();
 
           if (mounted) {

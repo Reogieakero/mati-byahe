@@ -236,28 +236,42 @@ class HomeController {
 
   Future<Map<String, dynamic>> getDashboardStats(String email) async {
     final db = await _localDb.database;
-    final String today = DateTime.now().toIso8601String().split('T')[0];
+    final today = DateTime.now().toIso8601String().split('T')[0];
 
-    // Count trips from today
-    final tripResult = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM trips WHERE email = ? AND end_time LIKE ?',
-      [email, '$today%'],
-    );
-
-    // Get the most recent plate number from completed trips
-    final plateResult = await db.query(
+    // 1. Try fetching from Local SQLite first
+    final List<Map<String, dynamic>> localTrips = await db.query(
       'trips',
-      columns: ['driver_plate'],
-      where: 'email = ? AND driver_plate IS NOT NULL AND driver_plate != "---"',
-      orderBy: 'end_time DESC',
-      limit: 1,
+      where:
+          'passenger_id = (SELECT id FROM users WHERE email = ?) AND start_time LIKE ?',
+      whereArgs: [email, '$today%'],
     );
 
-    return {
-      'count': tripResult.isNotEmpty ? tripResult.first['count'] : 0,
-      'plate': plateResult.isNotEmpty
-          ? plateResult.first['driver_plate']
-          : "None",
-    };
+    if (localTrips.isNotEmpty) {
+      return {
+        'count': localTrips.length,
+        'plate': localTrips.last['driver_plate'] ?? "None",
+      };
+    }
+
+    // 2. FALLBACK: Fetch from Supabase if Local is empty (e.g., after fresh login)
+    try {
+      final response = await _supabase
+          .from('trips')
+          .select('driver_plate')
+          .eq('status', 'completed')
+          .gte('start_datetime', '${today}T00:00:00')
+          .lte('start_datetime', '${today}T23:59:59');
+
+      if (response != null && (response as List).isNotEmpty) {
+        return {
+          'count': response.length,
+          'plate': response.last['driver_plate'] ?? "None",
+        };
+      }
+    } catch (e) {
+      debugPrint("Cloud fetch error: $e");
+    }
+
+    return {'count': 0, 'plate': "None"};
   }
 }

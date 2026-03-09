@@ -6,6 +6,7 @@ import 'widgets/verification_overlay.dart';
 import 'widgets/location_selector.dart';
 import 'widgets/action_grid_widget.dart';
 import 'widgets/active_trip_widget.dart';
+import '../core/database/sync_service.dart';
 import 'home_controller.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -49,6 +50,8 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _initialize() async {
+    await SyncService().syncOnStart();
+
     final verified = await _controller.checkVerification(widget.email);
     final activeData = await _controller.loadSavedFare(widget.email);
 
@@ -58,7 +61,12 @@ class _HomeScreenState extends State<HomeScreen>
         _activeTripData = activeData;
         _isLoading = false;
       });
+
       await _refreshStats();
+
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -143,7 +151,6 @@ class _HomeScreenState extends State<HomeScreen>
             color: AppColors.darkNavy,
             backgroundColor: Colors.white,
             onRefresh: () async {
-              // Re-run initialization to fetch latest status, active trips, and stats
               await _initialize();
             },
             child: SingleChildScrollView(
