@@ -233,4 +233,31 @@ class HomeController {
     overlay.insert(overlayEntry);
     Future.delayed(const Duration(seconds: 3), () => overlayEntry.remove());
   }
+
+  Future<Map<String, dynamic>> getDashboardStats(String email) async {
+    final db = await _localDb.database;
+    final String today = DateTime.now().toIso8601String().split('T')[0];
+
+    // Count trips from today
+    final tripResult = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM trips WHERE email = ? AND end_time LIKE ?',
+      [email, '$today%'],
+    );
+
+    // Get the most recent plate number from completed trips
+    final plateResult = await db.query(
+      'trips',
+      columns: ['driver_plate'],
+      where: 'email = ? AND driver_plate IS NOT NULL AND driver_plate != "---"',
+      orderBy: 'end_time DESC',
+      limit: 1,
+    );
+
+    return {
+      'count': tripResult.isNotEmpty ? tripResult.first['count'] : 0,
+      'plate': plateResult.isNotEmpty
+          ? plateResult.first['driver_plate']
+          : "None",
+    };
+  }
 }

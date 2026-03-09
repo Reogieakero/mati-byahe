@@ -24,6 +24,9 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isLoading = true;
   bool _isSendingCode = false;
 
+  int _todayTripCount = 0;
+  String _latestPlate = "None";
+
   Map<String, dynamic>? _activeTripData;
 
   @override
@@ -33,6 +36,16 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     _initialize();
+  }
+
+  Future<void> _refreshStats() async {
+    final stats = await _controller.getDashboardStats(widget.email);
+    if (mounted) {
+      setState(() {
+        _todayTripCount = stats['count'];
+        _latestPlate = stats['plate'];
+      });
+    }
   }
 
   Future<void> _initialize() async {
@@ -45,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen>
         _activeTripData = activeData;
         _isLoading = false;
       });
+      await _refreshStats();
     }
   }
 
@@ -124,31 +138,41 @@ class _HomeScreenState extends State<HomeScreen>
       children: [
         const HomeHeader(),
         Expanded(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 10),
-                DashboardCards(
-                  tripCount: 0,
-                  driverName: widget.role.toLowerCase() == 'driver'
-                      ? "You"
-                      : "Plan your ride...",
-                  plateNumber: "--- ---",
-                  email: widget.email,
-                  role: widget.role,
-                ),
-                const ActionGridWidget(),
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
-                  child: _activeTripData != null
-                      ? _buildActiveTrip()
-                      : _buildLocationSelector(),
-                ),
-                const SizedBox(height: 30),
-              ],
+          // ADDED: RefreshIndicator provides the pull-to-refresh behavior
+          child: RefreshIndicator(
+            color: AppColors.darkNavy,
+            backgroundColor: Colors.white,
+            onRefresh: () async {
+              // Re-run initialization to fetch latest status, active trips, and stats
+              await _initialize();
+            },
+            child: SingleChildScrollView(
+              // Physics MUST be set to AlwaysScrollableScrollPhysics for the
+              // RefreshIndicator to work even if the content is short.
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+                  DashboardCards(
+                    tripCount: _todayTripCount,
+                    plateNumber: _latestPlate,
+                    email: widget.email,
+                    role: widget.role,
+                  ),
+                  const ActionGridWidget(),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    child: _activeTripData != null
+                        ? _buildActiveTrip()
+                        : _buildLocationSelector(),
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
             ),
           ),
         ),
@@ -163,17 +187,14 @@ class _HomeScreenState extends State<HomeScreen>
       fare: fareValue,
       onArrived: () {
         _controller.confirmArrival(context, () async {
-          // 1. Capture the data we need before we nullify the state
           final dataToClear = _activeTripData;
 
-          // 2. TARGET THE WIDGET: Update state immediately to swap the view
           if (mounted) {
             setState(() {
               _activeTripData = null;
             });
           }
 
-          // 3. Background database cleanup (Home Screen is already refreshed)
           if (dataToClear != null) {
             await _controller.clearFare(
               email: widget.email,
@@ -186,12 +207,13 @@ class _HomeScreenState extends State<HomeScreen>
               driverPlate: dataToClear['driver_plate'] ?? "---",
               driverId: null,
               onCleared: () {
-                // Background sync happens here
+                _refreshStats();
               },
             );
           }
         });
       },
+
       onCancel: () {
         _controller.confirmChangeRoute(context, () async {
           final dataToClear = _activeTripData;
@@ -211,7 +233,9 @@ class _HomeScreenState extends State<HomeScreen>
             driverName: "Cancelled",
             driverPlate: dataToClear?['driver_plate'] ?? "---",
             driverId: null,
-            onCleared: () {},
+            onCleared: () {
+              _refreshStats();
+            },
           );
         });
       },
@@ -225,6 +249,7 @@ class _HomeScreenState extends State<HomeScreen>
       onTripStarted: (data) {
         setState(() {
           _activeTripData = data;
+          _latestPlate = data['driver_plate'] ?? "---";
         });
       },
       onFareCalculated: (fare) {},

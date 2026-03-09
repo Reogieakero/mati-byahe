@@ -3,7 +3,6 @@ import '../../core/constant/app_colors.dart';
 
 class DashboardCards extends StatelessWidget {
   final int tripCount;
-  final String driverName;
   final String plateNumber;
   final String email;
   final String role;
@@ -11,7 +10,6 @@ class DashboardCards extends StatelessWidget {
   const DashboardCards({
     super.key,
     required this.tripCount,
-    required this.driverName,
     required this.plateNumber,
     required this.email,
     required this.role,
@@ -222,14 +220,6 @@ class DashboardCards extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  driverName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
                 Text(
                   plateNumber,
                   style: TextStyle(
