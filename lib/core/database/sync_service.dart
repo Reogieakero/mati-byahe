@@ -65,6 +65,7 @@ class SyncService {
       where: 'is_synced = ?',
       whereArgs: [0],
     );
+
     for (var data in unsynced) {
       try {
         await _supabase.from('trips').upsert({
@@ -72,19 +73,25 @@ class SyncService {
           'passenger_id': data['passenger_id'],
           'driver_id': data['driver_id'],
           'driver_name': data['driver_name'],
-          'pickup': data['pickup'],
-          'drop_off': data['drop_off'],
-          'calculated_fare': data['fare'],
-          'date': data['date'],
-          'status': 'completed',
+          'driver_plate': data['driver_plate'],
+          'pickup': data['pickup'] ?? 'Unknown',
+          'drop_off': data['drop_off'] ?? '',
+          'calculated_fare': data['fare'] ?? 0.0,
+          'gas_tier': data['gas_tier'],
+          'start_datetime': data['start_time'],
+          'end_datetime': data['end_time'],
+          'status': data['end_time'] != null ? 'completed' : 'active',
         }, onConflict: 'uuid');
+
         await db.update(
           'trips',
           {'is_synced': 1},
           where: 'uuid = ?',
           whereArgs: [data['uuid']],
         );
-      } catch (e) {}
+      } catch (e) {
+        debugPrint("Sync failed for trip ${data['uuid']}: $e");
+      }
     }
   }
 

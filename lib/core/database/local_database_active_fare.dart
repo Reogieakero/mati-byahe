@@ -9,6 +9,7 @@ extension ActiveFareDatabase on LocalDatabase {
     required String dropOff,
     required String gasTier,
     required String startTime,
+    required String driverPlate,
   }) async {
     final db = await database;
     await db.insert('active_fare', {
@@ -18,6 +19,7 @@ extension ActiveFareDatabase on LocalDatabase {
       'drop_off': dropOff,
       'gas_tier': gasTier,
       'start_time': startTime,
+      'driver_plate': driverPlate,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 

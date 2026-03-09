@@ -35,10 +35,10 @@ class HomeController {
     required String pickup,
     required String dropOff,
     required String gasTier,
+    required String driverPlate,
     required Function(double) onSuccess,
   }) async {
     final String startTime = DateTime.now().toIso8601String();
-
     await _localDb.saveActiveFare(
       email: email,
       fare: fare,
@@ -46,8 +46,8 @@ class HomeController {
       dropOff: dropOff,
       gasTier: gasTier,
       startTime: startTime,
+      driverPlate: driverPlate,
     );
-
     onSuccess(fare);
     showTripStartNotification(context);
   }
@@ -65,7 +65,6 @@ class HomeController {
   }) async {
     final currentUser = _supabase.auth.currentUser;
     final String endTime = DateTime.now().toIso8601String();
-
     if (currentUser != null) {
       try {
         await _supabase.from('profiles').upsert({
@@ -76,7 +75,6 @@ class HomeController {
         debugPrint("Profile sync skipped: $e");
       }
     }
-
     await _localDb.saveTrip(
       email: email,
       pickup: pickup,
@@ -89,10 +87,8 @@ class HomeController {
       startTime: startTime,
       endTime: endTime,
     );
-
     await _localDb.clearActiveFare(email);
     onCleared();
-
     Future.delayed(const Duration(seconds: 2), () {
       _tripService.syncTrips();
     });
@@ -127,11 +123,15 @@ class HomeController {
   void confirmArrival(BuildContext context, VoidCallback onConfirm) {
     showDialog(
       context: context,
-      builder: (context) => ConfirmationDialog(
+      barrierDismissible: false,
+      builder: (dialogContext) => ConfirmationDialog(
         title: "End Trip?",
         content: "Are you sure you have reached your destination?",
         confirmText: "Yes, Arrived",
-        onConfirm: onConfirm,
+        onConfirm: () {
+          // This targets ONLY the dialog layer
+          onConfirm();
+        },
       ),
     );
   }
@@ -139,11 +139,15 @@ class HomeController {
   void confirmChangeRoute(BuildContext context, VoidCallback onConfirm) {
     showDialog(
       context: context,
-      builder: (context) => ConfirmationDialog(
+      barrierDismissible: false,
+      builder: (dialogContext) => ConfirmationDialog(
         title: "Change Route?",
         content: "This will cancel your current fare calculation. Continue?",
         confirmText: "Change",
-        onConfirm: onConfirm,
+        onConfirm: () {
+          // This targets ONLY the dialog layer
+          onConfirm();
+        },
       ),
     );
   }
@@ -224,7 +228,6 @@ class HomeController {
         ),
       ),
     );
-
     overlay.insert(overlayEntry);
     Future.delayed(const Duration(seconds: 3), () => overlayEntry.remove());
   }

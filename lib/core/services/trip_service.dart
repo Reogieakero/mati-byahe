@@ -20,13 +20,12 @@ class TripService {
 
       for (var data in unsynced) {
         try {
-          // build payload dynamically so we don't include driver_plate if
-          // the cloud table hasn't been updated yet (avoids PGRST204 errors).
           final payload = {
             'uuid': data['uuid'],
             'passenger_id': data['passenger_id'] ?? currentUser.id,
             'driver_id': data['driver_id'],
             'driver_name': data['driver_name'],
+            'driver_plate': data['driver_plate'],
             'pickup': data['pickup'],
             'drop_off': data['drop_off'],
             'calculated_fare': data['fare'],
@@ -36,9 +35,6 @@ class TripService {
             'created_at': data['date'],
             'status': 'completed',
           };
-          if (data['driver_plate'] != null) {
-            payload['driver_plate'] = data['driver_plate'];
-          }
 
           await _supabase.from('trips').upsert(payload, onConflict: 'uuid');
 
@@ -70,8 +66,6 @@ class TripService {
         );
 
         if (localExists.isEmpty) {
-          // cloudTrip may not have driver_plate field yet if the server schema
-          // hasn't been migrated; use null-aware operator to avoid errors.
           await db.insert('trips', {
             'uuid': cloudTrip['uuid'],
             'passenger_id': cloudTrip['passenger_id'],
@@ -97,7 +91,6 @@ class TripService {
   Future<void> deleteTrip(String uuid) async {
     try {
       await _supabase.from('trips').delete().eq('uuid', uuid);
-
       await _localDb.deleteTrip(uuid);
       debugPrint("Trip $uuid deleted from cloud and local.");
     } catch (e) {

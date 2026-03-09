@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter/foundation.dart';
 
 part 'local_database_trip.dart';
 part 'local_database_report.dart';
@@ -22,7 +23,7 @@ class LocalDatabase {
 
     return await openDatabase(
       pathName,
-      version: 27, // Incremented version to add driver_plate column
+      version: 29, // INCREMENTED TO 29
       onCreate: (db, version) async => await _createTables(db),
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 26) {
@@ -36,10 +37,22 @@ class LocalDatabase {
             await db.execute('ALTER TABLE users ADD COLUMN vehicle_type TEXT');
           } catch (e) {}
         }
+
         if (oldVersion < 27) {
           try {
             await db.execute('ALTER TABLE trips ADD COLUMN driver_plate TEXT');
           } catch (e) {}
+        }
+
+        // Migration for version 28/29 to ensure driver_plate exists
+        if (oldVersion < 29) {
+          try {
+            await db.execute(
+              'ALTER TABLE active_fare ADD COLUMN driver_plate TEXT',
+            );
+          } catch (e) {
+            debugPrint("Migration 29 Error: $e");
+          }
         }
       },
     );
@@ -72,7 +85,8 @@ class LocalDatabase {
         pickup TEXT,
         drop_off TEXT,
         gas_tier TEXT,
-        start_time TEXT
+        start_time TEXT,
+        driver_plate TEXT
       )
     ''');
 
@@ -84,6 +98,11 @@ class LocalDatabase {
         driver_id TEXT,
         driver_name TEXT,
         driver_plate TEXT,
+        pickup TEXT,
+        drop_off TEXT,
+        fare REAL,
+        gas_tier TEXT,
+        start_time TEXT,
         end_time TEXT,
         is_synced INTEGER DEFAULT 0
       )

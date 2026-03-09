@@ -42,9 +42,7 @@ class _HomeScreenState extends State<HomeScreen>
     if (mounted) {
       setState(() {
         _isVerified = verified;
-        if (activeData != null) {
-          _activeTripData = activeData;
-        }
+        _activeTripData = activeData;
         _isLoading = false;
       });
     }
@@ -163,32 +161,57 @@ class _HomeScreenState extends State<HomeScreen>
 
     return ActiveTripWidget(
       fare: fareValue,
-      onArrived: () => _controller.confirmArrival(context, () {
-        _controller.clearFare(
-          email: widget.email,
-          pickup: _activeTripData?['pickup'] ?? "Unknown",
-          dropOff: _activeTripData?['drop_off'] ?? "Unknown",
-          gasTier: _activeTripData?['gas_tier'] ?? "N/A",
-          fare: fareValue,
-          startTime: _activeTripData?['start_time'],
-          driverName: "None Assigned",
-          driverId: null,
-          onCleared: () => setState(() => _activeTripData = null),
-        );
-      }),
-      onCancel: () => _controller.confirmChangeRoute(context, () {
-        _controller.clearFare(
-          email: widget.email,
-          pickup: "Cancelled",
-          dropOff: "Cancelled",
-          gasTier: "N/A",
-          fare: 0.0,
-          startTime: _activeTripData?['start_time'],
-          driverName: "Cancelled",
-          driverId: null,
-          onCleared: () => setState(() => _activeTripData = null),
-        );
-      }),
+      onArrived: () {
+        _controller.confirmArrival(context, () async {
+          // 1. Capture the data we need before we nullify the state
+          final dataToClear = _activeTripData;
+
+          // 2. TARGET THE WIDGET: Update state immediately to swap the view
+          if (mounted) {
+            setState(() {
+              _activeTripData = null;
+            });
+          }
+
+          // 3. Background database cleanup (Home Screen is already refreshed)
+          if (dataToClear != null) {
+            await _controller.clearFare(
+              email: widget.email,
+              pickup: dataToClear['pickup'] ?? "Unknown",
+              dropOff: dataToClear['drop_off'] ?? "Unknown",
+              gasTier: dataToClear['gas_tier'] ?? "N/A",
+              fare: fareValue,
+              startTime: dataToClear['start_time'],
+              driverName: "None Assigned",
+              driverId: null,
+              onCleared: () {
+                // Background sync happens here
+              },
+            );
+          }
+        });
+      },
+      onCancel: () {
+        _controller.confirmChangeRoute(context, () async {
+          if (mounted) {
+            setState(() {
+              _activeTripData = null;
+            });
+          }
+          // Background cleanup
+          await _controller.clearFare(
+            email: widget.email,
+            pickup: "Cancelled",
+            dropOff: "Cancelled",
+            gasTier: "N/A",
+            fare: 0.0,
+            startTime: _activeTripData?['start_time'],
+            driverName: "Cancelled",
+            driverId: null,
+            onCleared: () {},
+          );
+        });
+      },
     );
   }
 
@@ -196,12 +219,12 @@ class _HomeScreenState extends State<HomeScreen>
     return LocationSelector(
       email: widget.email,
       role: widget.role,
-      onFareCalculated: (fare) async {
-        final updatedData = await _controller.loadSavedFare(widget.email);
+      onTripStarted: (data) {
         setState(() {
-          _activeTripData = updatedData;
+          _activeTripData = data;
         });
       },
+      onFareCalculated: (fare) {},
     );
   }
 }

@@ -12,7 +12,6 @@ class LocationSelector extends StatefulWidget {
   final String email;
   final String role;
   final Function(double) onFareCalculated;
-
   final Function(Map<String, dynamic>)? onTripStarted;
 
   const LocationSelector({
@@ -29,6 +28,7 @@ class LocationSelector extends StatefulWidget {
 
 class _LocationSelectorState extends State<LocationSelector> {
   final HomeController _controller = HomeController();
+  final TextEditingController _plateController = TextEditingController();
   String? _pickup;
   String? _drop;
   List<String> _allLocations = [];
@@ -47,20 +47,226 @@ class _LocationSelectorState extends State<LocationSelector> {
     _loadData();
   }
 
-  Future<void> _loadData() async {
-    final locations = await LocationDataService.fetchAllLocations();
-    setState(() => _allLocations = locations);
+  @override
+  void dispose() {
+    _plateController.dispose();
+    super.dispose();
   }
 
-  void _resetTrip() => setState(() {
-    _pickup = null;
-    _drop = null;
-  });
+  Future<void> _loadData() async {
+    final locations = await LocationDataService.fetchAllLocations();
+    if (mounted) {
+      setState(() {
+        _allLocations = locations;
+      });
+    }
+  }
+
+  void _resetTrip() {
+    setState(() {
+      _pickup = null;
+      _drop = null;
+      _plateController.clear();
+    });
+  }
+
+  Future<void> _showPlateNumberDialog(double fare) async {
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          contentPadding: EdgeInsets.zero,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                color: AppColors.primaryBlue.withOpacity(0.05),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Icon(
+                        Icons.directions_car_filled_outlined,
+                        color: AppColors.primaryBlue,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          text: "DRIVER DETAILS: ",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 11,
+                            color: AppColors.darkNavy,
+                            letterSpacing: 0.5,
+                          ),
+                          children: [
+                            TextSpan(
+                              text:
+                                  "Please enter the driver's plate number to proceed with the ride.",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 11,
+                                color: AppColors.darkNavy.withOpacity(0.7),
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: _buildPlateInput(),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        _plateController.clear();
+                        Navigator.pop(context);
+                      },
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: const Text(
+                        "BACK",
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (_plateController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Plate number is required"),
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.pop(context);
+                        _executeStartTrip(fare);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryBlue,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "CONFIRM RIDE",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _executeStartTrip(double fare) async {
+    await _controller.startTrip(
+      context: context,
+      email: widget.email,
+      fare: fare,
+      pickup: _pickup!,
+      dropOff: _drop!,
+      gasTier: _selectedGasTier,
+      driverPlate: _plateController.text,
+      onSuccess: (val) async {
+        if (widget.onTripStarted != null) {
+          widget.onTripStarted!({
+            'fare': fare,
+            'pickup': _pickup,
+            'drop_off': _drop,
+            'gas_tier': _selectedGasTier,
+            'driver_plate': _plateController.text,
+            'start_time': DateTime.now().toIso8601String(),
+          });
+        }
+        _resetTrip();
+      },
+    );
+  }
+
+  Widget _buildPlateInput() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primaryBlue.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primaryBlue.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.pin_outlined,
+            size: 18,
+            color: AppColors.primaryBlue,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _plateController,
+              autofocus: true,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkNavy,
+              ),
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                isDense: true,
+                hintText: "ENTER PLATE NUMBER",
+                hintStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w900),
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final double? fare = (_pickup != null && _drop != null)
-        ? FareService.calculateTripFare(_pickup, _drop, _selectedGasTier)
+        ? FareService.calculateTripFare(_pickup!, _drop!, _selectedGasTier)
         : null;
 
     final bool hasSelection = _pickup != null || _drop != null;
@@ -185,38 +391,19 @@ class _LocationSelectorState extends State<LocationSelector> {
   }
 
   Widget _buildFareOrPlaceholder(double? fare) {
-    final bool isDriver = widget.role.toLowerCase() == 'driver';
+    final bool isPassenger = widget.role.toLowerCase() == 'passenger';
 
     if (fare != null && fare > 0) {
       return FareDisplay(
         fare: fare,
-        buttonLabel: isDriver ? 'Clear' : 'Ride',
-        onArrived: isDriver
-            ? _resetTrip
-            : () async {
-                await _controller.startTrip(
-                  context: context,
-                  email: widget.email,
-                  fare: fare,
-                  pickup: _pickup!,
-                  dropOff: _drop!,
-                  gasTier: _selectedGasTier,
-                  onSuccess: (val) {
-                    // notify parent that the trip has started first, so
-                    // pickup/dropoff are available when they react.
-                    if (widget.onTripStarted != null) {
-                      widget.onTripStarted!({
-                        'fare': fare,
-                        'pickup': _pickup,
-                        'dropOff': _drop,
-                        'gasTier': _selectedGasTier,
-                      });
-                    }
-                    widget.onFareCalculated(val);
-                    _resetTrip();
-                  },
-                );
-              },
+        buttonLabel: isPassenger ? 'Ride' : 'Clear',
+        onArrived: () {
+          if (isPassenger) {
+            _showPlateNumberDialog(fare);
+          } else {
+            _resetTrip();
+          }
+        },
       );
     }
     return const EmptyRoutePlaceholder();
