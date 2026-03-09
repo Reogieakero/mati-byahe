@@ -134,8 +134,6 @@ class _NewsScreenState extends State<NewsScreen> {
             size: 20,
             color: AppColors.darkNavy,
           ),
-          filled: true,
-          fillColor: const Color(0xFFF5F5F5),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,

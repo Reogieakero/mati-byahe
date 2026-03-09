@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
+import '../../core/constant/app_colors.dart';
 
 class TrackingScreen extends StatefulWidget {
   const TrackingScreen({super.key});
@@ -8,315 +11,282 @@ class TrackingScreen extends StatefulWidget {
 }
 
 class _TrackingScreenState extends State<TrackingScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  final List<_DriverStatus> _records = [
-    _DriverStatus(
-      name: 'Driver #D-102',
-      location: 'Brgy. Dahican',
-      state: 'Online',
-      etaMinutes: 4,
-    ),
-    _DriverStatus(
-      name: 'Driver #D-047',
-      location: 'City Proper',
-      state: 'On Trip',
-      etaMinutes: 2,
-    ),
-    _DriverStatus(
-      name: 'Driver #D-089',
-      location: 'Mati Port',
-      state: 'Idle',
-      etaMinutes: 7,
-    ),
-    _DriverStatus(
-      name: 'Driver #D-131',
-      location: 'Capitol',
-      state: 'On Trip',
-      etaMinutes: 3,
-    ),
-  ];
+  final supabase = Supabase.instance.client;
 
-  String _activeFilter = 'All';
-  bool _showFastestFirst = true;
-  String _query = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Stream<List<Map<String, dynamic>>> _getTripStream() {
+    return supabase
+        .from('trips')
+        .stream(primaryKey: ['id'])
+        .order('created_at', ascending: false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final data = _filteredRecords();
-    final onTrip = _records.where((e) => e.state == 'On Trip').length;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Live Tracking')),
-      body: RefreshIndicator(
-        onRefresh: _simulateLiveUpdate,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          children: [
-            _mapPlaceholder(onTrip: onTrip),
-            const SizedBox(height: 12),
-            _searchField(),
-            const SizedBox(height: 10),
-            _filterChips(),
-            const SizedBox(height: 8),
-            _sortToggle(),
-            const SizedBox(height: 12),
-            if (data.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 30),
-                child: Center(
-                  child: Text(
-                    'No drivers found.',
-                    style: TextStyle(color: Color(0xFF607188)),
-                  ),
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text(
+          'Spending Trends',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: AppColors.darkNavy,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _getTripStream(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError)
+            return Center(child: Text("Error: ${snapshot.error}"));
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
+
+          final userId = supabase.auth.currentUser?.id;
+          final completedTrips = snapshot.data!.where((trip) {
+            final isMine = trip['passenger_id'] == userId;
+            final isDone = trip['status'] == 'completed';
+            return isMine && isDone;
+          }).toList();
+
+          final stats = _processTripData(completedTrips);
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildLineGraph(stats['weeklyData']),
+              const SizedBox(height: 20),
+              _buildSummaryCards(
+                today: stats['today'],
+                yesterday: stats['yesterday'],
+                monday: stats['monday'],
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                "Trip History",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkNavy,
                 ),
-              )
-            else
-              ...data.map(_statusTile),
+              ),
+              const SizedBox(height: 12),
+              ...completedTrips.take(10).map((trip) => _tripTile(trip)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Map<String, dynamic> _processTripData(List<Map<String, dynamic>> trips) {
+    final now = DateTime.now();
+    double today = 0, yesterday = 0, mondayTotal = 0;
+    List<double> weekly = List.filled(7, 0.0);
+
+    for (var trip in trips) {
+      final dateStr = trip['created_at'];
+      if (dateStr == null) continue;
+      final date = DateTime.parse(dateStr);
+      final fare = (trip['calculated_fare'] as num?)?.toDouble() ?? 0.0;
+
+      if (DateUtils.isSameDay(date, now)) today += fare;
+      if (DateUtils.isSameDay(date, now.subtract(const Duration(days: 1))))
+        yesterday += fare;
+
+      final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      final tripDate = DateTime(date.year, date.month, date.day);
+      final mondayDate = DateTime(
+        startOfWeek.year,
+        startOfWeek.month,
+        startOfWeek.day,
+      );
+
+      if (tripDate.isAtSameMomentAs(mondayDate) ||
+          tripDate.isAfter(mondayDate)) {
+        if (date.weekday == 1) mondayTotal += fare;
+        if (date.weekday <= 7) weekly[date.weekday - 1] += fare;
+      }
+    }
+    return {
+      'today': today,
+      'yesterday': yesterday,
+      'monday': mondayTotal,
+      'weeklyData': weekly,
+    };
+  }
+
+  Widget _buildLineGraph(List<double> weeklyData) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      height: 220,
+      decoration: BoxDecoration(
+        color: AppColors.darkNavy,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Weekly Expense Flow",
+            style: TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: CustomPaint(
+              size: Size.infinite,
+              painter: LineGraphPainter(weeklyData),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                .map(
+                  (d) => Text(
+                    d,
+                    style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCards({
+    required double today,
+    required double yesterday,
+    required double monday,
+  }) {
+    return Row(
+      children: [
+        _summaryItem("Today", today, Colors.blueAccent),
+        const SizedBox(width: 8),
+        _summaryItem("Yesterday", yesterday, Colors.orangeAccent),
+        const SizedBox(width: 8),
+        _summaryItem("Monday", monday, Colors.greenAccent),
+      ],
+    );
+  }
+
+  Widget _summaryItem(String label, double amount, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 11),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "₱${amount.toStringAsFixed(0)}",
+              style: TextStyle(
+                color: color,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _mapPlaceholder({required int onTrip}) {
-    return Container(
-      height: 170,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0C7A5A), Color(0xFF18A0FB)],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Map Preview',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 17,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Pull down to refresh live statuses.',
-            style: TextStyle(color: Color(0xFFD4F0FF)),
-          ),
-          const Spacer(),
-          Row(
-            children: [
-              _badge('On Trip: $onTrip'),
-              const SizedBox(width: 8),
-              _badge('Tracked: ${_records.length}'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _searchField() {
-    return TextField(
-      controller: _searchController,
-      onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-      decoration: InputDecoration(
-        hintText: 'Search by driver id or location',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: _query.isEmpty
-            ? null
-            : IconButton(
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() => _query = '');
-                },
-                icon: const Icon(Icons.close),
-              ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  Widget _filterChips() {
-    const filters = ['All', 'On Trip', 'Online', 'Idle'];
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: filters.map((label) {
-        final active = _activeFilter == label;
-        return InkWell(
-          borderRadius: BorderRadius.circular(999),
-          onTap: () => setState(() => _activeFilter = label),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-            decoration: BoxDecoration(
-              color: active ? const Color(0xFF17273B) : const Color(0xFFEFF4FA),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: active ? Colors.white : const Color(0xFF4A5D74),
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _sortToggle() {
-    return Row(
-      children: [
-        const Text(
-          'Sort by ETA:',
-          style: TextStyle(
-            color: Color(0xFF51647B),
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(width: 8),
-        ChoiceChip(
-          label: Text(_showFastestFirst ? 'Fastest' : 'Slowest'),
-          selected: true,
-          onSelected: (_) => setState(() => _showFastestFirst = !_showFastestFirst),
-        ),
-      ],
-    );
-  }
-
-  Widget _statusTile(_DriverStatus entry) {
-    Color chipColor;
-    if (entry.state == 'Online') {
-      chipColor = const Color(0xFF0C7A5A);
-    } else if (entry.state == 'On Trip') {
-      chipColor = const Color(0xFF18A0FB);
-    } else {
-      chipColor = const Color(0xFF8A5CF6);
-    }
-
+  Widget _tripTile(Map<String, dynamic> trip) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDCE7F5)),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          const CircleAvatar(
-            radius: 18,
-            backgroundColor: Color(0xFFEAF3FF),
-            child: Icon(Icons.person_outline_rounded, color: Color(0xFF17273B)),
-          ),
-          const SizedBox(width: 10),
+          const Icon(Icons.location_on, color: Colors.blueAccent, size: 20),
+          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(entry.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                Text(
-                  '${entry.location} • ETA ${entry.etaMinutes}m',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF667A92),
-                  ),
-                ),
-              ],
+            child: Text(
+              "${trip['pickup']} to ${trip['drop_off']}",
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: chipColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              entry.state,
-              style: TextStyle(color: chipColor, fontWeight: FontWeight.w700),
-            ),
+          Text(
+            "₱${trip['calculated_fare']}",
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ],
       ),
     );
   }
-
-  Widget _badge(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0x33FFFFFF),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-
-  List<_DriverStatus> _filteredRecords() {
-    final out = _records.where((entry) {
-      final filterPass = _activeFilter == 'All' || entry.state == _activeFilter;
-      final queryPass =
-          _query.isEmpty ||
-          entry.name.toLowerCase().contains(_query) ||
-          entry.location.toLowerCase().contains(_query);
-      return filterPass && queryPass;
-    }).toList();
-
-    out.sort((a, b) {
-      return _showFastestFirst
-          ? a.etaMinutes.compareTo(b.etaMinutes)
-          : b.etaMinutes.compareTo(a.etaMinutes);
-    });
-
-    return out;
-  }
-
-  Future<void> _simulateLiveUpdate() async {
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    setState(() {
-      for (final entry in _records) {
-        if (entry.state == 'On Trip') {
-          entry.etaMinutes = entry.etaMinutes > 1 ? entry.etaMinutes - 1 : 1;
-        } else if (entry.state == 'Online') {
-          entry.etaMinutes = entry.etaMinutes + 1;
-        }
-      }
-      _records.add(
-        _DriverStatus(
-          name: 'Driver #D-23${_records.length}',
-          location: 'Rotonda',
-          state: 'Online',
-          etaMinutes: 5,
-        ),
-      );
-    });
-  }
 }
 
-class _DriverStatus {
-  _DriverStatus({
-    required this.name,
-    required this.location,
-    required this.state,
-    required this.etaMinutes,
-  });
+class LineGraphPainter extends CustomPainter {
+  final List<double> data;
+  LineGraphPainter(this.data);
 
-  final String name;
-  final String location;
-  final String state;
-  int etaMinutes;
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.isEmpty) return;
+
+    final paint = Paint()
+      ..color = Colors.blueAccent
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Colors.blueAccent.withOpacity(0.3), Colors.transparent],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    double maxVal = data.reduce((a, b) => a > b ? a : b);
+    if (maxVal == 0) maxVal = 1;
+
+    final path = Path();
+    final fillPath = Path();
+
+    double dx = size.width / (data.length - 1);
+
+    for (int i = 0; i < data.length; i++) {
+      double dy = size.height - (data[i] / maxVal * size.height);
+      if (i == 0) {
+        path.moveTo(0, dy);
+        fillPath.moveTo(0, size.height);
+        fillPath.lineTo(0, dy);
+      } else {
+        path.lineTo(i * dx, dy);
+        fillPath.lineTo(i * dx, dy);
+      }
+    }
+
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
+
+    canvas.drawPath(fillPath, fillPaint);
+    canvas.drawPath(path, paint);
+
+    final dotPaint = Paint()..color = Colors.white;
+    for (int i = 0; i < data.length; i++) {
+      double dy = size.height - (data[i] / maxVal * size.height);
+      canvas.drawCircle(Offset(i * dx, dy), 3, dotPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
