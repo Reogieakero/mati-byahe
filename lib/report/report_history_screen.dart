@@ -182,8 +182,6 @@ class _ReportHistoryScreenState extends State<ReportHistoryScreen> {
                   },
                 )
               : null,
-          filled: true,
-          fillColor: const Color(0xFFF5F5F5),
           contentPadding: const EdgeInsets.symmetric(vertical: 0),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
