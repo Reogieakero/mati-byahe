@@ -15,12 +15,6 @@ class ActionGridWidget extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildItem(Icons.campaign_rounded, "Report", () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ReportScreen()),
-            );
-          }),
           _buildItem(Icons.newspaper_rounded, "News", () {
             Navigator.push(
               context,
