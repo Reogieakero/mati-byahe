@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../core/constant/app_colors.dart';
 import 'driver_details_view.dart';
 
 class QrScannerView extends StatefulWidget {
-  final Function(String) onQrCodeDetected;
-  const QrScannerView({super.key, required this.onQrCodeDetected});
+  const QrScannerView({super.key});
 
   @override
   State<QrScannerView> createState() => _QrScannerViewState();
@@ -35,7 +35,6 @@ class _QrScannerViewState extends State<QrScannerView>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (controller == null || !controller!.value.isInitialized) return;
-
     if (state == AppLifecycleState.resumed) {
       controller!.start();
     } else {
@@ -56,13 +55,14 @@ class _QrScannerViewState extends State<QrScannerView>
 
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
-      if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
+      final String? rawValue = barcode.rawValue;
+      if (rawValue != null && rawValue.isNotEmpty) {
         try {
-          final Map<String, dynamic> data = jsonDecode(barcode.rawValue!);
+          final Map<String, dynamic> data = jsonDecode(rawValue);
 
           if (data.containsKey('name') || data.containsKey('plate')) {
             _hasNavigated = true;
-            widget.onQrCodeDetected(barcode.rawValue!);
+            HapticFeedback.mediumImpact();
 
             if (mounted) {
               Navigator.pushReplacement(
@@ -125,11 +125,7 @@ class _QrScannerViewState extends State<QrScannerView>
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        error.errorCode ==
-                                MobileScannerErrorCode
-                                    .controllerAlreadyInitialized
-                            ? "Camera is warming up..."
-                            : "Camera Error: ${error.errorCode}",
+                        "Camera Error",
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -137,9 +133,7 @@ class _QrScannerViewState extends State<QrScannerView>
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton(
-                        onPressed: () {
-                          controller?.stop().then((_) => controller?.start());
-                        },
+                        onPressed: () => controller?.start(),
                         child: const Text("Reset Camera"),
                       ),
                     ],

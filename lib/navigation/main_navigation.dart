@@ -59,15 +59,7 @@ class _MainNavigationState extends State<MainNavigation>
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => QrScannerView(
-                      onQrCodeDetected: (qr) {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text('Scanned: $qr')));
-                      },
-                    ),
-                  ),
+                  MaterialPageRoute(builder: (_) => const QrScannerView()),
                 );
               },
             ),

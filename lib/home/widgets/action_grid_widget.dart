@@ -44,16 +44,7 @@ class ActionGridWidget extends StatelessWidget {
   void _openQrScanner(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => QrScannerView(
-          onQrCodeDetected: (qrCode) {
-            // Handle the detected QR code here
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Scanned: $qrCode')));
-          },
-        ),
-      ),
+      MaterialPageRoute(builder: (context) => const QrScannerView()),
     );
   }
 

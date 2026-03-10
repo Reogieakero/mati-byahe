@@ -22,7 +22,7 @@ class NavigationScreens {
     return [
       HomeScreen(email: email, role: role),
       HistoryScreen(email: email),
-      QrScannerView(onQrCodeDetected: (code) {}),
+      const QrScannerView(),
       const ReportHistoryScreen(),
       ProfileScreen(email: email, role: role),
     ];
