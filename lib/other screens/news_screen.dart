@@ -24,10 +24,12 @@ class _NewsScreenState extends State<NewsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(
+        0xFFF8FAFC,
+      ), // Matches TrackingScreen background
       body: Column(
         children: [
-          _buildHeader(),
+          _buildHeader(), // Now matches HomeHeader styling
           _buildSearchBar(),
           Expanded(
             child: FutureBuilder<List<NewsArticle>>(
@@ -53,7 +55,8 @@ class _NewsScreenState extends State<NewsScreen> {
                       ? _buildEmptyState()
                       : ListView.builder(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 15,
+                            horizontal:
+                                16, // Consistent with tracking list padding
                             vertical: 10,
                           ),
                           physics: const BouncingScrollPhysics(
@@ -75,44 +78,29 @@ class _NewsScreenState extends State<NewsScreen> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(top: 50, bottom: 20, left: 10, right: 20),
-      decoration: const BoxDecoration(
-        color: AppColors.darkNavy,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(10, 50, 10, 15),
+      decoration: const BoxDecoration(color: Colors.transparent),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(
-                  Icons.arrow_back_ios_new, // Professional IOS-style back icon
-                  color: Colors.white,
-                  size: 20,
-                ),
+          Positioned(
+            left: 0,
+            child: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                size: 20,
+                color: AppColors.darkNavy,
               ),
-              const Text(
-                "World News",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(
-              left: 48,
-            ), // Align with the text above
-            child: const Text(
-              "World and Local Updates",
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+          const Text(
+            'WORLD NEWS',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              color: AppColors.darkNavy,
+              letterSpacing: 2.0,
             ),
           ),
         ],
@@ -122,22 +110,23 @@ class _NewsScreenState extends State<NewsScreen> {
 
   Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: TextField(
         controller: _searchController,
         onChanged: (value) => setState(() => _query = value.trim()),
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         decoration: InputDecoration(
-          hintText: "Search news...",
+          hintText: "Search updates...",
           prefixIcon: const Icon(
-            Icons.public,
+            Icons.search,
             size: 20,
             color: AppColors.darkNavy,
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(15),
             borderSide: BorderSide.none,
           ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
         ),
       ),
     );
@@ -145,12 +134,20 @@ class _NewsScreenState extends State<NewsScreen> {
 
   Widget _newsCard(NewsArticle article) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(
+          20,
+        ), // Matches summary cards and trip tiles
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,7 +156,7 @@ class _NewsScreenState extends State<NewsScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(15),
                 child: Image.network(
                   article.imageUrl!,
                   height: 180,
@@ -175,7 +172,7 @@ class _NewsScreenState extends State<NewsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.darkNavy.withOpacity(0.1),
+                  color: AppColors.darkNavy.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -192,7 +189,7 @@ class _NewsScreenState extends State<NewsScreen> {
                 article.pubDate.split(' ')[0],
                 style: TextStyle(
                   fontSize: 11,
-                  color: AppColors.textGrey.withOpacity(0.6),
+                  color: Colors.grey.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -201,7 +198,7 @@ class _NewsScreenState extends State<NewsScreen> {
           Text(
             article.title,
             style: const TextStyle(
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.bold,
               fontSize: 16,
               color: AppColors.darkNavy,
             ),
@@ -213,7 +210,7 @@ class _NewsScreenState extends State<NewsScreen> {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               height: 1.4,
-              color: AppColors.textGrey,
+              color: Colors.grey,
               fontSize: 14,
             ),
           ),
@@ -223,6 +220,8 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return const Center(child: Text("No news available."));
+    return const Center(
+      child: Text("No news available.", style: TextStyle(color: Colors.grey)),
+    );
   }
 }
