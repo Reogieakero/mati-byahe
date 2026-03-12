@@ -47,7 +47,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 'passenger_id': trip['passenger_id'],
                 'driver_id': trip['driver_id'],
                 'driver_name': trip['driver_name'],
-                'driver_plate': trip['driver_plate'],
+                'plate_number': trip['plate_number'],
                 'pickup': trip['pickup'],
                 'drop_off': trip['drop_off'],
                 'fare': (trip['calculated_fare'] as num?)?.toDouble() ?? 0.0,

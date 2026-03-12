@@ -44,7 +44,7 @@ class ReportDetailsScreen extends StatelessWidget {
                     ReportDetailRow(
                       icon: Icons.badge_outlined,
                       label: "Vehicle Plate",
-                      value: report['driver_plate'] ?? "N/A",
+                      value: report['plate_number'] ?? "N/A",
                     ),
                     _buildDivider(),
                     ReportDetailRow(

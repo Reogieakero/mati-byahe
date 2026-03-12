@@ -25,7 +25,7 @@ class PaymentInfoCard extends StatelessWidget {
           ),
           _row("Driver", trip['driver_name'] ?? "N/A"),
           const SizedBox(height: 12),
-          _row("Plate No.", trip['driver_plate'] ?? "N/A"),
+          _row("Plate No.", trip['plate_number'] ?? "N/A"),
         ],
       ),
     );

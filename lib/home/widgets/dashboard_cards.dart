@@ -3,6 +3,7 @@ import '../../core/constant/app_colors.dart';
 
 class DashboardCards extends StatelessWidget {
   final int tripCount;
+  final int passengerCount;
   final String plateNumber;
   final String email;
   final String role;
@@ -10,6 +11,7 @@ class DashboardCards extends StatelessWidget {
   const DashboardCards({
     super.key,
     required this.tripCount,
+    required this.passengerCount,
     required this.plateNumber,
     required this.email,
     required this.role,
@@ -157,7 +159,11 @@ class DashboardCards extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildStatColumn('PASSENGERS', '12', Icons.people_alt_rounded),
+        _buildStatColumn(
+          'PASSENGERS TODAY',
+          '$passengerCount',
+          Icons.people_alt_rounded,
+        ),
         _buildStatDivider(),
         _buildStatColumn(
           'TODAY TRIP',

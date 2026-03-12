@@ -12,6 +12,31 @@ class HomeController {
   final TripService _tripService = TripService();
   final _supabase = Supabase.instance.client;
 
+  String _normalizePlate(dynamic value) {
+    if (value == null) return '';
+    return value.toString().toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+  }
+
+  String _tripPlate(Map<String, dynamic> trip) {
+    return (trip['plate_number'] ?? trip['driver_plate'] ?? '').toString();
+  }
+
+  DateTime? _tripDateTime(Map<String, dynamic> trip) {
+    final raw =
+        (trip['start_datetime'] ?? trip['start_time'] ?? trip['created_at'])
+            ?.toString();
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toLocal();
+  }
+
+  bool _isTodayTrip(Map<String, dynamic> trip, DateTime nowLocal) {
+    final dt = _tripDateTime(trip);
+    if (dt == null) return false;
+    return dt.year == nowLocal.year &&
+        dt.month == nowLocal.month &&
+        dt.day == nowLocal.day;
+  }
+
   Future<bool> checkVerification(String email) async {
     final db = await _localDb.database;
     final result = await db.query(
@@ -66,6 +91,22 @@ class HomeController {
   }) async {
     final currentUser = _supabase.auth.currentUser;
     final String endTime = DateTime.now().toIso8601String();
+    String? resolvedPassengerId = currentUser?.id;
+
+    if (resolvedPassengerId == null || resolvedPassengerId.isEmpty) {
+      final db = await _localDb.database;
+      final localUser = await db.query(
+        'users',
+        columns: ['id'],
+        where: 'email = ?',
+        whereArgs: [email],
+        limit: 1,
+      );
+      if (localUser.isNotEmpty) {
+        resolvedPassengerId = localUser.first['id']?.toString();
+      }
+    }
+
     if (currentUser != null) {
       try {
         await _supabase.from('profiles').upsert({
@@ -82,7 +123,7 @@ class HomeController {
       dropOff: dropOff,
       fare: fare,
       gasTier: gasTier,
-      passengerId: currentUser?.id,
+      passengerId: resolvedPassengerId,
       driverPlate: driverPlate,
       driverId: driverId,
       driverName: driverName,
@@ -234,9 +275,192 @@ class HomeController {
     Future.delayed(const Duration(seconds: 3), () => overlayEntry.remove());
   }
 
-  Future<Map<String, dynamic>> getDashboardStats(String email) async {
+  Future<Map<String, dynamic>> getDashboardStats({
+    required String email,
+    required String role,
+  }) async {
     final db = await _localDb.database;
-    final today = DateTime.now().toIso8601String().split('T')[0];
+    final nowLocal = DateTime.now();
+    final today = nowLocal.toIso8601String().split('T')[0];
+
+    if (role.toLowerCase() == 'driver') {
+      try {
+        final currentUser = _supabase.auth.currentUser;
+        String plateNumber = '';
+
+        if (currentUser != null) {
+          final profileById = await _supabase
+              .from('profiles')
+              .select('plate_number')
+              .eq('id', currentUser.id)
+              .maybeSingle();
+          plateNumber = (profileById?['plate_number'] ?? '').toString().trim();
+        }
+
+        if (plateNumber.isEmpty) {
+          final profileByEmail = await _supabase
+              .from('profiles')
+              .select('plate_number')
+              .eq('email', email)
+              .maybeSingle();
+          plateNumber = (profileByEmail?['plate_number'] ?? '')
+              .toString()
+              .trim();
+        }
+
+        if (plateNumber.isNotEmpty) {
+          final normalizedPlate = _normalizePlate(plateNumber);
+
+          List<dynamic> response = [];
+          try {
+            response = await _supabase
+                .from('trips')
+                .select(
+                  'passenger_id, plate_number, start_datetime, start_time, created_at, status',
+                )
+                .eq('status', 'completed')
+                .order('created_at', ascending: false);
+          } catch (_) {
+            // Backward compatibility for workspaces where cloud still has driver_plate.
+            response = await _supabase
+                .from('trips')
+                .select(
+                  'passenger_id, driver_plate, start_datetime, start_time, created_at, status',
+                )
+                .eq('status', 'completed')
+                .order('created_at', ascending: false);
+          }
+
+          // If no completed rows are visible, retry without status filter
+          // to handle null/legacy statuses in existing data.
+          if (response.isEmpty) {
+            try {
+              response = await _supabase
+                  .from('trips')
+                  .select(
+                    'passenger_id, plate_number, start_datetime, start_time, created_at, status',
+                  )
+                  .order('created_at', ascending: false);
+            } catch (_) {
+              response = await _supabase
+                  .from('trips')
+                  .select(
+                    'passenger_id, driver_plate, start_datetime, start_time, created_at, status',
+                  )
+                  .order('created_at', ascending: false);
+            }
+          }
+
+          if (response != null && (response as List).isNotEmpty) {
+            final matchedTrips = response.where((trip) {
+              return _normalizePlate(_tripPlate(trip)) == normalizedPlate;
+            }).toList();
+
+            final int todayTripCount = matchedTrips.where((trip) {
+              return _isTodayTrip(trip, nowLocal);
+            }).length;
+
+            final todayMatchedTrips = matchedTrips.where((trip) {
+              return _isTodayTrip(trip, nowLocal);
+            }).toList();
+
+            final int passengerCountToday = todayMatchedTrips
+                .map((trip) => trip['passenger_id']?.toString())
+                .where((id) => id != null && id.isNotEmpty)
+                .toSet()
+                .length;
+
+            final int passengerCountTotal = matchedTrips
+                .map((trip) => trip['passenger_id']?.toString())
+                .where((id) => id != null && id.isNotEmpty)
+                .toSet()
+                .length;
+
+            return {
+              'count': todayTripCount,
+              'plate': plateNumber,
+              'passengers': passengerCountToday,
+              'todayTrips': todayTripCount,
+              'todayPassengers': passengerCountToday,
+              'totalTrips': matchedTrips.length,
+              'totalPassengers': passengerCountTotal,
+            };
+          }
+
+          debugPrint(
+            'Driver dashboard: no matching trips. profile plate=$plateNumber, rowsFetched=${response.length}',
+          );
+        }
+      } catch (e) {
+        debugPrint('Cloud fetch error (driver stats): $e');
+      }
+
+      // Last fallback for offline state: local stats by driver plate.
+      final List<Map<String, dynamic>> localDriver = await db.query(
+        'users',
+        columns: ['plate_number'],
+        where: 'email = ?',
+        whereArgs: [email],
+        limit: 1,
+      );
+
+      final String localPlate =
+          (localDriver.isNotEmpty ? localDriver.first['plate_number'] : null)
+              ?.toString()
+              .trim() ??
+          '';
+
+      if (localPlate.isNotEmpty) {
+        final normalizedLocalPlate = _normalizePlate(localPlate);
+        final List<Map<String, dynamic>> localTrips = await db.query(
+          'trips',
+          columns: ['passenger_id', 'plate_number', 'start_time'],
+        );
+
+        final matchedLocalTrips = localTrips.where((trip) {
+          return _normalizePlate(trip['plate_number']) == normalizedLocalPlate;
+        }).toList();
+
+        final int passengerCountToday = matchedLocalTrips
+            .where((trip) {
+              return _isTodayTrip(trip, nowLocal);
+            })
+            .map((trip) => trip['passenger_id']?.toString())
+            .where((id) => id != null && id.isNotEmpty)
+            .toSet()
+            .length;
+
+        final int passengerCountTotal = matchedLocalTrips
+            .map((trip) => trip['passenger_id']?.toString())
+            .where((id) => id != null && id.isNotEmpty)
+            .toSet()
+            .length;
+
+        final int todayTripCount = matchedLocalTrips.where((trip) {
+          return _isTodayTrip(trip, nowLocal);
+        }).length;
+
+        return {
+          'count': todayTripCount,
+          'plate': localPlate,
+          'passengers': passengerCountToday,
+          'todayTrips': todayTripCount,
+          'todayPassengers': passengerCountToday,
+          'totalTrips': matchedLocalTrips.length,
+          'totalPassengers': passengerCountTotal,
+        };
+      }
+
+      return {
+        'count': 0,
+        'plate': 'None',
+        'passengers': 0,
+        'todayTrips': 0,
+        'todayPassengers': 0,
+        'totalTrips': 0,
+        'totalPassengers': 0,
+      };
+    }
 
     // 1. Try fetching from Local SQLite first
     final List<Map<String, dynamic>> localTrips = await db.query(
@@ -249,15 +473,34 @@ class HomeController {
     if (localTrips.isNotEmpty) {
       return {
         'count': localTrips.length,
-        'plate': localTrips.last['driver_plate'] ?? "None",
+        'plate': localTrips.last['plate_number'] ?? "None",
+        'passengers': 0,
+        'todayTrips': localTrips.length,
+        'todayPassengers': 0,
+        'totalTrips': localTrips.length,
+        'totalPassengers': 0,
       };
     }
 
     // 2. FALLBACK: Fetch from Supabase if Local is empty (e.g., after fresh login)
     try {
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        return {
+          'count': 0,
+          'plate': 'None',
+          'passengers': 0,
+          'todayTrips': 0,
+          'todayPassengers': 0,
+          'totalTrips': 0,
+          'totalPassengers': 0,
+        };
+      }
+
       final response = await _supabase
           .from('trips')
-          .select('driver_plate')
+          .select('plate_number')
+          .eq('passenger_id', currentUser.id)
           .eq('status', 'completed')
           .gte('start_datetime', '${today}T00:00:00')
           .lte('start_datetime', '${today}T23:59:59');
@@ -265,13 +508,26 @@ class HomeController {
       if (response != null && (response as List).isNotEmpty) {
         return {
           'count': response.length,
-          'plate': response.last['driver_plate'] ?? "None",
+          'plate': response.last['plate_number'] ?? "None",
+          'passengers': 0,
+          'todayTrips': response.length,
+          'todayPassengers': 0,
+          'totalTrips': response.length,
+          'totalPassengers': 0,
         };
       }
     } catch (e) {
       debugPrint("Cloud fetch error: $e");
     }
 
-    return {'count': 0, 'plate': "None"};
+    return {
+      'count': 0,
+      'plate': 'None',
+      'passengers': 0,
+      'todayTrips': 0,
+      'todayPassengers': 0,
+      'totalTrips': 0,
+      'totalPassengers': 0,
+    };
   }
 }

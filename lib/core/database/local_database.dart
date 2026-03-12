@@ -23,7 +23,7 @@ class LocalDatabase {
 
     return await openDatabase(
       pathName,
-      version: 31,
+      version: 34,
       onCreate: (db, version) async => await _createTables(db),
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 26) {
@@ -39,13 +39,13 @@ class LocalDatabase {
         }
         if (oldVersion < 27) {
           try {
-            await db.execute('ALTER TABLE trips ADD COLUMN driver_plate TEXT');
+            await db.execute('ALTER TABLE trips ADD COLUMN plate_number TEXT');
           } catch (e) {}
         }
         if (oldVersion < 29) {
           try {
             await db.execute(
-              'ALTER TABLE active_fare ADD COLUMN driver_plate TEXT',
+              'ALTER TABLE active_fare ADD COLUMN plate_number TEXT',
             );
           } catch (e) {}
         }
@@ -61,6 +61,36 @@ class LocalDatabase {
             await db.execute('ALTER TABLE users ADD COLUMN avatar_url TEXT');
           } catch (e) {}
         }
+        if (oldVersion < 32) {
+          try {
+            await db.execute('ALTER TABLE users ADD COLUMN password TEXT');
+          } catch (e) {}
+        }
+        if (oldVersion < 33) {
+          try {
+            await db.execute('ALTER TABLE trips ADD COLUMN email TEXT');
+          } catch (e) {}
+        }
+        if (oldVersion < 34) {
+          try {
+            await db.execute('ALTER TABLE trips ADD COLUMN plate_number TEXT');
+          } catch (e) {}
+          try {
+            await db.execute(
+              "UPDATE trips SET plate_number = driver_plate WHERE plate_number IS NULL OR plate_number = ''",
+            );
+          } catch (e) {}
+          try {
+            await db.execute(
+              'ALTER TABLE active_fare ADD COLUMN plate_number TEXT',
+            );
+          } catch (e) {}
+          try {
+            await db.execute(
+              "UPDATE active_fare SET plate_number = driver_plate WHERE plate_number IS NULL OR plate_number = ''",
+            );
+          } catch (e) {}
+        }
       },
     );
   }
@@ -70,6 +100,7 @@ class LocalDatabase {
       CREATE TABLE IF NOT EXISTS users(
         id TEXT PRIMARY KEY,
         email TEXT,
+        password TEXT,
         full_name TEXT,
         phone_number TEXT,
         role TEXT,
@@ -94,7 +125,7 @@ class LocalDatabase {
         drop_off TEXT,
         gas_tier TEXT,
         start_time TEXT,
-        driver_plate TEXT
+        plate_number TEXT
       )
     ''');
 
@@ -102,10 +133,11 @@ class LocalDatabase {
       CREATE TABLE IF NOT EXISTS trips(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT UNIQUE,
+        email TEXT,
         passenger_id TEXT,
         driver_id TEXT,
         driver_name TEXT,
-        driver_plate TEXT,
+        plate_number TEXT,
         pickup TEXT,
         drop_off TEXT,
         fare REAL,

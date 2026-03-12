@@ -26,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isSendingCode = false;
 
   int _todayTripCount = 0;
+  int _driverPassengerCount = 0;
   String _latestPlate = "None";
 
   Map<String, dynamic>? _activeTripData;
@@ -40,11 +41,15 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _refreshStats() async {
-    final stats = await _controller.getDashboardStats(widget.email);
+    final stats = await _controller.getDashboardStats(
+      email: widget.email,
+      role: widget.role,
+    );
     if (mounted) {
       setState(() {
         _todayTripCount = stats['count'];
         _latestPlate = stats['plate'];
+        _driverPassengerCount = stats['passengers'] ?? 0;
       });
     }
   }
@@ -165,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen>
                   const SizedBox(height: 10),
                   DashboardCards(
                     tripCount: _todayTripCount,
+                    passengerCount: _driverPassengerCount,
                     plateNumber: _latestPlate,
                     email: widget.email,
                     role: widget.role,
@@ -211,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen>
               fare: fareValue,
               startTime: dataToClear['start_time'],
               driverName: "None Assigned",
-              driverPlate: dataToClear['driver_plate'] ?? "---",
+              driverPlate: dataToClear['plate_number'] ?? "---",
               driverId: null,
               onCleared: () {
                 _refreshStats();
@@ -238,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen>
             fare: 0.0,
             startTime: _activeTripData?['start_time'],
             driverName: "Cancelled",
-            driverPlate: dataToClear?['driver_plate'] ?? "---",
+            driverPlate: dataToClear?['plate_number'] ?? "---",
             driverId: null,
             onCleared: () {
               _refreshStats();
@@ -256,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen>
       onTripStarted: (data) {
         setState(() {
           _activeTripData = data;
-          _latestPlate = data['driver_plate'] ?? "---";
+          _latestPlate = data['plate_number'] ?? "---";
         });
       },
       onFareCalculated: (fare) {},

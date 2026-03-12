@@ -215,7 +215,7 @@ class _LocationSelectorState extends State<LocationSelector> {
             'pickup': _pickup,
             'drop_off': _drop,
             'gas_tier': _selectedGasTier,
-            'driver_plate': _plateController.text,
+            'plate_number': _plateController.text,
             'start_time': DateTime.now().toIso8601String(),
           });
         }

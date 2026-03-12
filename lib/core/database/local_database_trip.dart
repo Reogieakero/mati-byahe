@@ -22,7 +22,7 @@ extension TripDatabase on LocalDatabase {
       'passenger_id': passengerId,
       'driver_id': driverId,
       'driver_name': driverName,
-      'driver_plate': driverPlate,
+      'plate_number': driverPlate,
       'email': email,
       'pickup': pickup,
       'drop_off': dropOff,

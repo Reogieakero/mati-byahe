@@ -19,7 +19,7 @@ extension ActiveFareDatabase on LocalDatabase {
       'drop_off': dropOff,
       'gas_tier': gasTier,
       'start_time': startTime,
-      'driver_plate': driverPlate,
+      'plate_number': driverPlate,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 

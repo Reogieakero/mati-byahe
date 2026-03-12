@@ -36,7 +36,7 @@ extension ReportDatabase on LocalDatabase {
         t.pickup, 
         t.drop_off, 
         t.driver_name,
-        t.driver_plate,
+        t.plate_number,
         t.start_time,
         t.end_time
       FROM reports r

@@ -19,7 +19,7 @@ class AuthService {
       if (res.user != null) {
         final profileData = await _supabase
             .from('profiles')
-            .select('full_name, phone_number, role')
+            .select('full_name, phone_number, role, plate_number')
             .eq('id', res.user!.id)
             .maybeSingle();
 
@@ -35,6 +35,7 @@ class AuthService {
           'password': password,
           'full_name': profileData?['full_name'],
           'phone_number': profileData?['phone_number'],
+          'plate_number': profileData?['plate_number'],
           'role': role,
           'is_verified': 1,
           'is_synced': 1,
