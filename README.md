@@ -1,51 +1,45 @@
-📂 Proposed Repository Structure: README.md
-# Mati Byahe 🛵
-Mati Byahe is a localized community-driven transportation platform designed to bridge the gap between commuters and drivers in Mati City. Whether you're a passenger looking for a reliable ride to Dahican or a driver wanting to maximize your earnings, Mati Byahe makes the journey seamless.
+Mati Byahé - Mobile Fare & Trip Management System
 
-🚀 Key Features
-👤 For Passengers
-Easy Booking: Find a ride in seconds, from tricycles to private cars.
+Mati Byahé is a mobile application designed to provide residents of Mati City with a seamless transportation experience. The app serves as a digital fare calculator, trip tracker, and news portal, enhancing convenience for passengers and drivers alike.
 
-Fare Transparency: Get estimated fare rates based on local city ordinances to avoid overcharging.
+Features
+For Passengers:
+Fare Calculation – Displays the exact fare based on city routes and tariffs.
+Trip History – View a detailed log of all previous trips.
+Report Drivers – Report any driver-related issues directly through the app.
+Lost & Found Tracking – Easily track and manage lost items during trips.
+City News – Stay updated with news using the NewData.io
 
-Safety Tracking: Share your ride details with family or friends in real-time.
+For Drivers:
+Earnings Overview – Track total earnings and trips in real-time.
+Passenger List – View passenger details per trip.
+Reports – Access and manage reports submitted by passengers.
 
-Destination Guides: Built-in pins for major landmarks (e.g., Mati Park, Dahican Beach, Provincial Capitol).
+Technologies Used
+Mobile Framework: Flutter 
 
-🚘 For Drivers
-Flexible Scheduling: Go "Online" only when you want to accept passengers.
+Backend: Supabase
 
-Direct Payouts: Keep more of what you earn with minimal platform fees.
+Database: PostgreSQL and SQLite
 
-Route Optimization: Get the best paths to pick up and drop off passengers quickly.
+APIs: NewData.io for news updates
 
-Driver Community: Access a dedicated dashboard to track daily earnings and ratings.
 
-🛠️ Tech Stack (Suggested)
-If you haven't finalized your stack yet, here is a popular combination for this type of app:
+Installation
+Clone the repository:
+git clone https://github.com/yourusername/mati-byahe.git
 
-Frontend: Flutter or React Native (Cross-platform for Android/iOS)
-
-Backend: Node.js with Express or Firebase (for real-time updates)
-
-Database: PostgreSQL (with PostGIS for location) or Firestore
-
-Maps API: Google Maps Platform or Mapbox
-
-📋 Installation (Dev Setup)
-Clone the repo:
-
-Bash
-git clone https://github.com/yourusername/mati_byahe.git
 Install dependencies:
+cd mati-byahe
+npm install
 
-Bash
-npm install  # or flutter pub get
-Setup Environment Variables: Create a .env file and add your API keys.
+Configure environment variables for API keys and database credentials in .env.
+Run the app on an emulator or connected device:
+npm run start
+Usage
 
-Run the app:
+Passengers can calculate fare, track trips, report drivers, or check lost & found items.
 
-Bash
-npm start # or flutter run
-🌟 Why "Mati Byahe"?
-Mati City has a unique geography—stretching from the urban center to the far-reaching shores of Dahican. Mati Byahe isn't just an app; it's a digital infrastructure project aimed at improving the local economy and making transportation accessible for every Matinians.
+Drivers can monitor their earnings, view passengers, and access reports.
+
+News updates are fetched automatically from the NewData.io
